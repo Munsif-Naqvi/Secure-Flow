@@ -1,34 +1,42 @@
-# SecureFlow: project brief
+# Midterm scope (about 8 days)
 
-## The problem
-Students and small teams build Flask web apps without security training. Code-only scanners such as Bandit report long lists of possible problems and many are false alarms. Developers ignore the list or waste time checking each item.
+## Deliverable
+The extension scans a Flask project and flags routes that look unprotected. All results are "Unconfirmed". Delivered with the SRS, ERD, Figma design and plan.
 
-## The idea
-SecureFlow gives a short, trustworthy list. It runs inside VS Code. It reads the Flask code to find *suspects*. Later (FYP-2), a Docker sandbox attacks a safe copy of the app to *prove* each suspect. A problem is reported as **confirmed** only when the attack worked. The developer sees the proof and can apply a ready-made fix and re-run the test.
+## Steps and acceptance checks
+Do the steps in order. Each is small. Do not start the next until the current one passes.
 
-## The two problem classes
-1. **Broken Access Control**: missing login check, missing role (admin) check, one user reaching another user's data.
-2. **Unsafe Input Handling**: SQL injection, command injection, path traversal, template injection.
+1. **Hello world through the whole chain.**
+   Extension command "SecureFlow: Scan Project" runs `python engine/main.py <open folder>`; the engine prints one fake finding as JSON; the extension underlines the right line.
+   *Check:* press F5, run the command on any folder, see an underline.
+2. **Route finder.** Use `ast` to find every Flask route: `@app.route`, `@bp.route` on Blueprints (with `url_prefix`), `app.add_url_rule`. Record url path, HTTP methods (default GET), file, line.
+   *Check:* on `engine/tests/fixtures/tiny_app/`, all routes are listed correctly. pytest passes.
+3. **Protection detector.** For each route find login or role protections: decorators, `before_request` hooks, and simple inline checks. Rules in `docs/03-detection-rules.md`.
+   *Check:* the tiny app's protected routes show a protection, the unprotected ones show none.
+4. **Missing-login rule.** Flag routes with no protection, except the public allowlist. Build findings in the format of `docs/04-findings.schema.json`.
+   *Check:* output validates against the schema. The tiny app yields exactly the expected findings.
+5. **Extension display.** Amber underline on the route line, results list (view in the side panel or a simple webview) with click-to-code, status bar summary such as "SecureFlow: 3 unprotected routes", "Unconfirmed" label, plain-language explanation. Layout follows the Figma screens (`docs/figma/`).
+   *Check:* demo on the tiny app works end to end.
+6. **Run on the corpus** (Maheen's 5 apps, `docs/07-test-corpus.md`). Compare findings with each `ground_truth.json`. Record how many real problems were found and how many false alarms.
+   *Check:* a results table exists in `docs/results-midterm.md`.
+7. **Package.** `npx vsce package` produces a `.vsix`. Install it in a normal VS Code window and run it once.
 
-## Users
-One user type: the developer. SecureFlow has no accounts or login of its own. It runs locally. The "test accounts" in the docs belong to the app being tested.
+## Stretch (only if everything above is done)
+String-built SQL queries (`cursor.execute(f"...{user_input}...")` or concatenation). Flag as `sql_injection`, Unconfirmed.
 
-## Architecture
-- **VS Code extension (TypeScript)**: commands, panels, underlines. Runs the engine as a command-line program and reads JSON.
-- **Engine (Python)**: finds routes and protections, applies rules, produces findings. Later: controls the Docker test box and runs live tests.
-- **Test box (Docker, FYP-2)**: disposable container with a copy of the app and its database. No internet while running. Removed after the scan.
-- **SecureFlow database (SQLite, local file in `.secureflow/`)**: scans, routes, findings, evidence, fixes. Schema in `docs/05-database.sql` (not used in the midterm slice).
+## Cut-line
+If time runs short, stop after step 5 and step 6 with whatever apps are ready. Drop steps 7 and the stretch first.
 
-## Phases
-- **FYP-1 (semester 1)**: code scan, routes and protections, rules, VS Code UI, explanations, rule-based fix suggestions, report export, scan history, benchmark with Bandit baseline.
-- **FYP-2 (semester 2)**: complete Docker setup, database copy, test setup, live verification, proof view, fix re-test, full error screens, full benchmark, user testing.
-- **Midterm slice (now)**: see `docs/02-midterm-scope.md`.
+## Midterm demo script
+1. Open a sample app in VS Code. 2. Run SecureFlow: Scan Project. 3. Show underlines and the results list. 4. Click a finding, open the explanation. 5. Show the results table: SecureFlow versus the ground truth (and Bandit if available).
 
-## Principles
-- Never report a problem as confirmed without a live test.
-- Never change the developer's real files or database unasked.
-- Plain language in every message the developer sees.
-- Fewer, more accurate findings beat more, noisier ones.
-
-## Reference files
-`docs/reference/SecureFlow_SRS.pdf` (requirements), `docs/reference/SecureFlow_ERD.png` (database), the Figma screens (export key screens into `docs/figma/`).
+## Definition of done (midterm)
+- [ ] Engine runs from the command line and its output validates against the schema
+- [ ] Routes are found for decorators, blueprints and add_url_rule
+- [ ] Protections detected as in `docs/03-detection-rules.md`
+- [ ] Missing-login findings produced; public routes are not flagged
+- [ ] Extension shows underlines, results list, status bar, explanation
+- [ ] All results say Unconfirmed
+- [ ] pytest tests exist for route finding, protection detection and the rule
+- [ ] Results on the corpus recorded
+- [ ] `.vsix` builds and installs
