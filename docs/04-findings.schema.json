@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SecureFlow engine output",
+  "type": "object",
+  "required": ["schema_version", "scan", "routes", "findings", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "scan": {
+      "type": "object",
+      "required": ["project_path", "scan_mode", "scan_status", "started_at", "finished_at", "files_scanned", "files_skipped"],
+      "additionalProperties": false,
+      "properties": {
+        "project_path": { "type": "string" },
+        "scan_mode": { "type": "string", "enum": ["code_only", "full"] },
+        "scan_status": { "type": "string", "enum": ["completed", "cancelled", "failed"] },
+        "started_at": { "type": "string", "description": "ISO 8601 time" },
+        "finished_at": { "type": "string", "description": "ISO 8601 time" },
+        "files_scanned": { "type": "integer", "minimum": 0 },
+        "files_skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file_path", "reason"],
+            "additionalProperties": false,
+            "properties": { "file_path": { "type": "string" }, "reason": { "type": "string" } }
+          }
+        },
+        "error_message": { "type": "string", "description": "Only when scan_status is failed" }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url_path", "http_methods", "file_path", "line_number", "protections_found"],
+        "additionalProperties": false,
+        "properties": {
+          "url_path": { "type": "string" },
+          "http_methods": { "type": "array", "items": { "type": "string" } },
+          "file_path": { "type": "string", "description": "Relative to project_path, forward slashes" },
+          "line_number": { "type": "integer", "minimum": 1 },
+          "protections_found": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["finding_match_key", "problem_class", "problem_type", "severity", "finding_status", "url_path", "file_path", "line_number", "explanation"],
+        "additionalProperties": false,
+        "properties": {
+          "finding_match_key": { "type": "string" },
+          "problem_class": { "type": "string", "enum": ["access_control", "unsafe_input"] },
+          "problem_type": { "type": "string", "enum": ["missing_login", "missing_role_check", "missing_ownership_check", "sql_injection", "command_injection", "path_traversal", "template_injection"] },
+          "severity": { "type": "string", "enum": ["High", "Medium", "Low"] },
+          "finding_status": { "type": "string", "enum": ["unconfirmed", "confirmed", "discarded", "unclear", "fixed"], "description": "The midterm engine only produces unconfirmed" },
+          "url_path": { "type": "string" },
+          "file_path": { "type": "string" },
+          "line_number": { "type": "integer", "minimum": 1 },
+          "explanation": { "type": "string" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["suspects_found", "problems_confirmed"],
+      "additionalProperties": false,
+      "properties": {
+        "suspects_found": { "type": "integer", "minimum": 0 },
+        "problems_confirmed": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
