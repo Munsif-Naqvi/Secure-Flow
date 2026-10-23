@@ -1,15 +1,16 @@
 import * as assert from 'assert';
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
 import * as vscode from 'vscode';
-// import * as myExtension from '../../extension';
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+suite('SecureFlow: Scan Project', () => {
+	test('runs the engine and underlines line 1 of app.py', async () => {
+		await vscode.commands.executeCommand('secureflow.scanProject');
 
-	test('Sample test', () => {
-		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
-		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
+		const folder = vscode.workspace.workspaceFolders![0].uri;
+		const found = vscode.languages.getDiagnostics(vscode.Uri.joinPath(folder, 'app.py'));
+
+		assert.strictEqual(found.length, 1);
+		assert.strictEqual(found[0].source, 'SecureFlow');
+		assert.strictEqual(found[0].range.start.line, 0);
+		assert.strictEqual(found[0].severity, vscode.DiagnosticSeverity.Warning);
 	});
 });
