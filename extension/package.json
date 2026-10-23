@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "secureflow.helloWorld",
-        "title": "Hello World"
+        "command": "secureflow.scanProject",
+        "title": "SecureFlow: Scan Project"
       }
     ]
   },
