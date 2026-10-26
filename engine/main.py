@@ -6,16 +6,19 @@ Usage:
 Prints the scan result as JSON on standard output, in the format of
 docs/04-findings.schema.json.
 
-Midterm step 1 ("hello world through the whole chain"): the engine does not
-analyse anything yet. It picks the first Python file in the folder and reports
-one fake finding on line 1, so we can check that the VS Code extension can run
-the engine, read its JSON and underline the right line.
+Midterm step 2: the engine finds the Flask routes (secureflow/routes.py) and
+lists them under "routes". Protection detection and the missing-login rule
+come in steps 3 and 4. Until then the engine still reports the one fake
+finding from step 1 on line 1 of the first Python file, so the VS Code
+extension keeps working end to end.
 """
 
 import json
 import os
 import sys
 from datetime import datetime, timezone
+
+from secureflow.routes import find_routes, parse_files
 
 # Folders that never contain the developer's own app code.
 SKIPPED_FOLDERS = {".git", ".venv", "venv", "env", "__pycache__", "node_modules", ".secureflow"}
@@ -59,6 +62,8 @@ def scan(project_path):
     """Build the scan result as a Python dict (turned into JSON by main)."""
     started_at = now_iso()
     python_files = find_python_files(project_path)
+    trees, files_skipped = parse_files(project_path, python_files)
+    routes = find_routes(trees)
 
     findings = []
     if python_files:
@@ -72,10 +77,10 @@ def scan(project_path):
             "scan_status": "completed",
             "started_at": started_at,
             "finished_at": now_iso(),
-            "files_scanned": len(python_files),
-            "files_skipped": [],
+            "files_scanned": len(trees),
+            "files_skipped": files_skipped,
         },
-        "routes": [],
+        "routes": [route.to_dict() for route in routes],
         "findings": findings,
         "summary": {
             "suspects_found": len(findings),
