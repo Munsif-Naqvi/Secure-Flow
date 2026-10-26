@@ -38,12 +38,17 @@ class FlaskObject:
 
 @dataclass
 class Route:
-    """One route. `handler` (the function's ast node) is kept for Step 3, not printed."""
+    """One route. The fields after line_number are used by protections.py, not printed."""
     url_path: str
     http_methods: list
     file_path: str
     line_number: int
-    handler: object = None
+    handler: object = None     # ast node of the function (or MethodView class)
+    owner: object = None       # the FlaskObject (app or Blueprint) the route is on
+    # The decorators that really wrap the view Flask calls. Python applies
+    # decorators from the bottom up, so for `@x.route` only the ones *below*
+    # it count: one above it is added after Flask has already saved the view.
+    decorators: list = field(default_factory=list)
     protections_found: list = field(default_factory=list)
 
     def to_dict(self):
@@ -92,9 +97,16 @@ def parse_files(project_path, python_files):
     return trees, skipped
 
 
-def find_routes(trees):
-    """Return the list of Route objects found in all parsed files, in file and line order."""
-    files = {file_path: collect_file_info(file_path, tree) for file_path, tree in trees.items()}
+def collect_files(trees):
+    """Pass 1 for every parsed file. Returns a dict: file_path -> FileInfo."""
+    return {file_path: collect_file_info(file_path, tree) for file_path, tree in trees.items()}
+
+
+def find_routes(files):
+    """Return the list of Route objects found in all files, in file and line order.
+
+    `files` is the result of collect_files(trees).
+    """
     registrations = collect_registrations(files)
 
     routes = []
@@ -218,9 +230,11 @@ def routes_in_file(info, files, registrations):
     routes = []
     for node in ast.walk(info.tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            for decorator in node.decorator_list:
+            for index, decorator in enumerate(node.decorator_list):
                 route = route_from_decorator(decorator, node, info, files, registrations)
                 if route:
+                    # decorator_list is in top-to-bottom order: keep the ones below this one.
+                    route.decorators = node.decorator_list[index + 1:]
                     routes.append(route)
         elif isinstance(node, ast.Call):
             route = route_from_add_url_rule(node, info, files, registrations)
@@ -257,6 +271,7 @@ def route_from_decorator(decorator, function, info, files, registrations):
         file_path=info.file_path,
         line_number=decorator.lineno,
         handler=function,
+        owner=flask_object,
     )
 
 
@@ -288,12 +303,18 @@ def route_from_add_url_rule(call, info, files, registrations):
     else:
         methods = read_methods(methods_node, info.constants)
 
+    # add_url_rule receives the function after all its decorators were applied,
+    # so every decorator on it counts. A MethodView class keeps its decorators
+    # in a `decorators = [...]` list instead, which protections.py reads.
+    decorators = handler.decorator_list if isinstance(handler, (ast.FunctionDef, ast.AsyncFunctionDef)) else []
     return Route(
         url_path=full_path(flask_object, path, registrations),
         http_methods=methods,
         file_path=info.file_path,
         line_number=call.lineno,
         handler=handler,
+        owner=flask_object,
+        decorators=decorators,
     )
 
 

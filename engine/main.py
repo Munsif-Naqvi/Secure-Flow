@@ -6,11 +6,11 @@ Usage:
 Prints the scan result as JSON on standard output, in the format of
 docs/04-findings.schema.json.
 
-Midterm step 2: the engine finds the Flask routes (secureflow/routes.py) and
-lists them under "routes". Protection detection and the missing-login rule
-come in steps 3 and 4. Until then the engine still reports the one fake
-finding from step 1 on line 1 of the first Python file, so the VS Code
-extension keeps working end to end.
+Midterm step 3: the engine finds the Flask routes (secureflow/routes.py),
+detects each route's login protections (secureflow/protections.py) and lists
+them under "routes". The missing-login rule comes in step 4. Until then the
+engine still reports the one fake finding from step 1 on line 1 of the first
+Python file, so the VS Code extension keeps working end to end.
 """
 
 import json
@@ -18,7 +18,8 @@ import os
 import sys
 from datetime import datetime, timezone
 
-from secureflow.routes import find_routes, parse_files
+from secureflow.protections import add_protections
+from secureflow.routes import collect_files, find_routes, parse_files
 
 # Folders that never contain the developer's own app code.
 SKIPPED_FOLDERS = {".git", ".venv", "venv", "env", "__pycache__", "node_modules", ".secureflow"}
@@ -63,7 +64,9 @@ def scan(project_path):
     started_at = now_iso()
     python_files = find_python_files(project_path)
     trees, files_skipped = parse_files(project_path, python_files)
-    routes = find_routes(trees)
+    files = collect_files(trees)
+    routes = find_routes(files)
+    add_protections(routes, files)
 
     findings = []
     if python_files:
