@@ -38,7 +38,7 @@ class FlaskObject:
 
 @dataclass
 class Route:
-    """One route. The fields after line_number are used by protections.py, not printed."""
+    """One route. The fields after line_number are used by protections.py and rules.py, not printed."""
     url_path: str
     http_methods: list
     file_path: str
@@ -49,7 +49,12 @@ class Route:
     # decorators from the bottom up, so for `@x.route` only the ones *below*
     # it count: one above it is added after Flask has already saved the view.
     decorators: list = field(default_factory=list)
+    # The decorators *above* `@x.route`. Flask ignores them, so they never
+    # protect the route. rules.py uses them to warn about a misplaced
+    # @login_required. Always empty for add_url_rule routes.
+    decorators_above: list = field(default_factory=list)
     protections_found: list = field(default_factory=list)
+    misplaced_protections: list = field(default_factory=list)  # filled by protections.py
 
     def to_dict(self):
         """The route in the JSON format of docs/04-findings.schema.json."""
@@ -233,8 +238,9 @@ def routes_in_file(info, files, registrations):
             for index, decorator in enumerate(node.decorator_list):
                 route = route_from_decorator(decorator, node, info, files, registrations)
                 if route:
-                    # decorator_list is in top-to-bottom order: keep the ones below this one.
+                    # decorator_list is in top-to-bottom order: split it at this one.
                     route.decorators = node.decorator_list[index + 1:]
+                    route.decorators_above = node.decorator_list[:index]
                     routes.append(route)
         elif isinstance(node, ast.Call):
             route = route_from_add_url_rule(node, info, files, registrations)

@@ -6,11 +6,10 @@ Usage:
 Prints the scan result as JSON on standard output, in the format of
 docs/04-findings.schema.json.
 
-Midterm step 3: the engine finds the Flask routes (secureflow/routes.py),
+Midterm step 4: the engine finds the Flask routes (secureflow/routes.py),
 detects each route's login protections (secureflow/protections.py) and lists
-them under "routes". The missing-login rule comes in step 4. Until then the
-engine still reports the one fake finding from step 1 on line 1 of the first
-Python file, so the VS Code extension keeps working end to end.
+them under "routes". Then the missing-login rule (secureflow/rules.py) turns
+every unprotected, non-public route into an Unconfirmed finding.
 """
 
 import json
@@ -20,6 +19,7 @@ from datetime import datetime, timezone
 
 from secureflow.protections import add_protections
 from secureflow.routes import collect_files, find_routes, parse_files
+from secureflow.rules import missing_login_findings
 
 # Folders that never contain the developer's own app code.
 SKIPPED_FOLDERS = {".git", ".venv", "venv", "env", "__pycache__", "node_modules", ".secureflow"}
@@ -44,21 +44,6 @@ def find_python_files(project_path):
     return sorted(found)
 
 
-def fake_finding(file_path):
-    """One made-up finding, only used to test the engine-to-extension chain."""
-    return {
-        "finding_match_key": "fake:" + file_path + ":1",
-        "problem_class": "access_control",
-        "problem_type": "missing_login",
-        "severity": "Medium",
-        "finding_status": "unconfirmed",
-        "url_path": "/fake",
-        "file_path": file_path,
-        "line_number": 1,
-        "explanation": "Test finding: SecureFlow is connected. This is not a real problem.",
-    }
-
-
 def scan(project_path):
     """Build the scan result as a Python dict (turned into JSON by main)."""
     started_at = now_iso()
@@ -68,9 +53,7 @@ def scan(project_path):
     routes = find_routes(files)
     add_protections(routes, files)
 
-    findings = []
-    if python_files:
-        findings.append(fake_finding(python_files[0]))
+    findings = missing_login_findings(routes)
 
     return {
         "schema_version": "1.0",

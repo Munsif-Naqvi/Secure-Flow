@@ -29,6 +29,8 @@ d. **Inline checks** inside the handler body or a before_request body: any of
 
 If none apply, the route is **unprotected**.
 
+**Decorator order matters.** Python applies decorators from the bottom up, and `@app.route` saves the view at the moment it runs. So only decorators *below* `@app.route` (or `@bp.route`, `@app.get`, ...) protect the route. A `@login_required` written *above* the route decorator wraps the function after Flask has already saved it, so Flask ignores it and the route is unprotected. The engine keeps such misplaced protection decorators so the finding can say so (see part 3). For `add_url_rule(..., view_func=fn)` every decorator on `fn` counts, because Flask receives the function after all of them were applied.
+
 ## 3. The rule: missing login (`missing_login`)
 Flag every unprotected route except the **public allowlist**. A route is public if its path (lowercased, trailing slash removed) is one of: `/`, `/index`, `/home`, `/login`, `/signin`, `/logout`, `/register`, `/signup`, `/forgot-password`, `/reset-password`, `/health`, `/healthz`, `/ping`, `/about`, `/contact`, `/static/...`, `/favicon.ico`; or the handler function name is one of `index`, `home`, `login`, `logout`, `register`, `signup`, `health`, `static`. Keep the list in one constants file so it is easy to change.
 
@@ -40,6 +42,11 @@ Flag every unprotected route except the **public allowlist**. A route is public 
 - `finding_match_key`: the first 12 hex characters of SHA-1 of `"<url_path>|<problem_type>|<file_path>"`
 - `explanation`, plain language, filled from this template:
   `This route (<METHODS> <url_path>) has no login check that SecureFlow could find. Anyone who visits it may be able to use it without logging in. This was found by reading the code and has not been tested live.`
+
+  `<METHODS>` is the route's methods joined with `, ` (for example `GET, POST`).
+  If a protection decorator sits above the route decorator (see part 2), one sentence is added after the first one: `A @login_required sits above the route decorator, so Flask ignores it; move it below.` The decorator is named as written in the code. With more than one: `@login_required, @roles_required('admin') sit above the route decorator, so Flask ignores them; move them below.`
+
+**Misplaced decorator on a public route.** A route with a protection decorator above its route decorator is flagged even when it is on the public allowlist, because the decorator shows the developer wanted a login check there. Rewriting the code automatically is a fix suggestion and stays post-midterm.
 
 ## 4. Honest limits (state these in the UI and the demo)
 - The tool guesses from the code. It can flag a route that is protected in a way it cannot see (for example a protection added by a library at the web server level).
