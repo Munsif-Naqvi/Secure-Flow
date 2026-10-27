@@ -1,31 +1,31 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { execFile } from 'child_process';
-
-// The parts of one finding the extension uses (full format: docs/04-findings.schema.json).
-interface Finding {
-	severity: string;
-	file_path: string;
-	line_number: number;
-	explanation: string;
-}
-
-interface ScanResult {
-	schema_version: string;
-	findings: Finding[];
-	summary: object;
-}
+import { ResultsView } from './resultsView';
+import { Finding, ScanResult } from './types';
 
 let diagnostics: vscode.DiagnosticCollection;
 let log: vscode.OutputChannel;
+let statusBar: vscode.StatusBarItem;
+let resultsView: ResultsView;
 
 export function activate(context: vscode.ExtensionContext) {
 	diagnostics = vscode.languages.createDiagnosticCollection('SecureFlow');
 	log = vscode.window.createOutputChannel('SecureFlow');
-	context.subscriptions.push(diagnostics, log);
+
+	// The status bar item stays hidden until the first scan. Clicking it opens the results.
+	statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	statusBar.command = 'secureflow.showResults';
+
+	resultsView = new ResultsView();
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand('secureflow.scanProject', () => scanProject(context))
+		diagnostics,
+		log,
+		statusBar,
+		vscode.window.registerWebviewViewProvider(ResultsView.viewId, resultsView),
+		vscode.commands.registerCommand('secureflow.scanProject', () => scanProject(context)),
+		vscode.commands.registerCommand('secureflow.showResults', () => resultsView.reveal())
 	);
 }
 
@@ -37,6 +37,9 @@ async function scanProject(context: vscode.ExtensionContext) {
 	}
 
 	diagnostics.clear();
+	statusBar.text = '$(sync~spin) SecureFlow: scanning';
+	statusBar.show();
+	resultsView.showScanning(folder.name);
 
 	// During development the engine sits next to the extension folder in the repo:
 	// <repo>/extension (this extension) and <repo>/engine/main.py.
@@ -55,6 +58,7 @@ async function scanProject(context: vscode.ExtensionContext) {
 		}
 	} catch (error) {
 		log.appendLine(`Scan failed: ${error}`);
+		statusBar.text = '$(warning) SecureFlow: scan failed';
 		const choice = await vscode.window.showErrorMessage(
 			'SecureFlow could not read the scan result. Your files were not changed.',
 			'Open log'
@@ -66,6 +70,9 @@ async function scanProject(context: vscode.ExtensionContext) {
 	}
 
 	showFindings(projectPath, result.findings);
+	updateStatusBar(result.findings.length);
+	resultsView.showResults(projectPath, result);
+	await resultsView.reveal();
 }
 
 // Runs `python engine/main.py <folder>` and returns what it printed.
@@ -111,6 +118,8 @@ function showFindings(projectPath: string, findings: Finding[]) {
 
 		const diagnostic = new vscode.Diagnostic(range, finding.explanation, severity);
 		diagnostic.source = 'SecureFlow';
+		// Shown next to the source in the hover and the Problems panel: "SecureFlow(Unconfirmed)".
+		diagnostic.code = 'Unconfirmed';
 
 		const filePath = path.join(projectPath, finding.file_path);
 		byFile.set(filePath, [...(byFile.get(filePath) ?? []), diagnostic]);
@@ -121,6 +130,17 @@ function showFindings(projectPath: string, findings: Finding[]) {
 	}
 
 	log.appendLine(`Scan finished: ${findings.length} finding(s).`);
+}
+
+// "SecureFlow: 3 unprotected routes", or "SecureFlow: no problems found".
+function updateStatusBar(count: number) {
+	if (count === 0) {
+		statusBar.text = '$(shield) SecureFlow: no problems found';
+	} else {
+		statusBar.text = `$(shield) SecureFlow: ${count} unprotected ${count === 1 ? 'route' : 'routes'}`;
+	}
+	statusBar.tooltip = 'Unconfirmed: found by reading the code, not tested live. Click to see the results.';
+	statusBar.show();
 }
 
 export function deactivate() {}

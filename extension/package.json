@@ -16,8 +16,30 @@
       {
         "command": "secureflow.scanProject",
         "title": "SecureFlow: Scan Project"
+      },
+      {
+        "command": "secureflow.showResults",
+        "title": "SecureFlow: Show Results"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "secureflow",
+          "title": "SecureFlow",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "secureflow": [
+        {
+          "type": "webview",
+          "id": "secureflow.results",
+          "name": "Results"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
