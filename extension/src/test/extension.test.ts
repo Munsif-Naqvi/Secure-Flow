@@ -8,8 +8,8 @@ suite('SecureFlow: Scan Project', () => {
 		const folder = vscode.workspace.workspaceFolders![0].uri;
 		const found = vscode.languages.getDiagnostics(vscode.Uri.joinPath(folder, 'app.py'));
 
-		// app.py in engine/tests/fixtures/tiny_app has 8 unprotected routes.
-		assert.strictEqual(found.length, 8);
+		// app.py in engine/tests/fixtures/tiny_app has 9 unprotected routes.
+		assert.strictEqual(found.length, 9);
 		for (const diagnostic of found) {
 			assert.strictEqual(diagnostic.source, 'SecureFlow');
 			assert.strictEqual(diagnostic.code, 'Unconfirmed');
