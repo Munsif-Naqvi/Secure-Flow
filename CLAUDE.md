@@ -46,6 +46,7 @@ If the real layout differs (for example the extension was generated at the repo 
 
 ## Decisions made along the way
 - **Login decorator above the route decorator (decided in Step 3/4).** Flask ignores a `@login_required` placed above `@app.route`, so the route is unprotected and is flagged as `missing_login`, even if it is on the public allowlist. The explanation adds: "A @login_required sits above the route decorator, so Flask ignores it; move it below." The engine only tells the developer; rewriting the code for them is a fix suggestion (post-midterm). Rules: `docs/03-detection-rules.md`, parts 2 and 3.
+- **`finding_match_key` is not unique within one scan (noted in Step 4/5).** Routes with the same path in the same file (for example PUT, DELETE and PATCH on `/item/<id>`) share one key. The extension's results view identifies a finding by its position in the list, not by the key.
 
 ## Words that must be used consistently
 - **Suspect**: a place in the code that looks like a problem and has not been tested.
