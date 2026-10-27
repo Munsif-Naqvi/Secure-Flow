@@ -9,8 +9,8 @@ c. A `decorators = [login_required]` list on a MethodView class.
 d. A simple check written inside the handler, e.g. `if not current_user.is_authenticated`.
 
 Like routes.py, this only reads the ast tree. The scanned code is never run.
-This step only *records* protections. Deciding which routes are a problem
-(the missing-login rule) is Step 4.
+This file only *records* protections. Deciding which routes are a problem
+(the missing-login rule) is done in rules.py.
 """
 
 import ast
@@ -49,6 +49,22 @@ def add_protections(routes, files):
         found += inline_checks(route.handler)
         # Keep each label once, in the order it was found.
         route.protections_found = list(dict.fromkeys(found))
+        route.misplaced_protections = misplaced_protections(route.decorators_above)
+
+
+def misplaced_protections(decorators_above):
+    """Login-style decorators written above `@x.route`, as they appear in the code.
+
+    Flask ignores these (it saved the view before they wrapped it), so they are
+    not protections. We keep their text, e.g. "login_required" or
+    "auth.login_required", so the finding can tell the developer to move them.
+    """
+    names = []
+    for decorator in decorators_above:
+        if protection_label(decorator):
+            # ast.unparse turns the node back into code text, e.g. "jwt_required()".
+            names.append(ast.unparse(decorator))
+    return names
 
 
 # ---------------------------------------------------------------------------

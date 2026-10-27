@@ -21,7 +21,7 @@ secureflow/
   docs/               project documents (read these first)
   engine/             Python engine (static analysis)
     main.py           command-line entry point
-    secureflow/       package: routes.py, protections.py, rules.py, output.py
+    secureflow/       package: routes.py, protections.py, rules.py, public_routes.py
     tests/            pytest tests
   extension/          VS Code extension (TypeScript, esbuild)
   corpus/             test Flask apps with ground truth (made by Maheen)
@@ -43,6 +43,9 @@ If the real layout differs (for example the extension was generated at the repo 
 - Keep the code simple and commented where the logic is not obvious. The user must be able to explain every rule to a panel.
 - Before editing many files, or before adding a dependency, ask.
 - Do not invent features or requirement text. If something is unclear, check `docs/` first, then ask.
+
+## Decisions made along the way
+- **Login decorator above the route decorator (decided in Step 3/4).** Flask ignores a `@login_required` placed above `@app.route`, so the route is unprotected and is flagged as `missing_login`, even if it is on the public allowlist. The explanation adds: "A @login_required sits above the route decorator, so Flask ignores it; move it below." The engine only tells the developer; rewriting the code for them is a fix suggestion (post-midterm). Rules: `docs/03-detection-rules.md`, parts 2 and 3.
 
 ## Words that must be used consistently
 - **Suspect**: a place in the code that looks like a problem and has not been tested.
