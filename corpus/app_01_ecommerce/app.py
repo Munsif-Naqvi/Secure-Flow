@@ -109,7 +109,11 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-@app.route('/products')
+# right now it flags this route as a missing auth
+# but it is actually a public route (false flag)
+# we're building a live testing sandboxed environment
+# for this exact reason
+@app.route('/products') 
 def products():
     return "<h3>Public Product Catalog</h3><p>Item 1: Laptop - $1200</p><p>Item 2: Mouse - $25</p>"
 
