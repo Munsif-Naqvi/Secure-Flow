@@ -24,6 +24,9 @@ One user type: the developer. SecureFlow has no accounts or login of its own. It
 - **FYP-2 (semester 2)**: complete Docker setup, database copy, test setup, live verification, proof view, fix re-test, full error screens, full benchmark, user testing.
 - **Midterm slice (now)**: see `docs/02-midterm-scope.md`.
 
+## Future goals (not in FYP-1 or FYP-2 scope yet)
+- **Publish the extension** on the VS Code Marketplace, and on Open VSX for Cursor and VSCodium. Until then it is shared as a `.vsix` file. Before publishing: create a publisher account (its ID must match `"publisher"` in `extension/package.json`), add a LICENSE file and a 128×128 PNG icon, then run `npx vsce publish` (`npx ovsx publish` for Open VSX).
+
 ## Principles
 - Never report a problem as confirmed without a live test.
 - Never change the developer's real files or database unasked.
