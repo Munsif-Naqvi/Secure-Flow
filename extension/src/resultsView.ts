@@ -8,10 +8,8 @@ type ViewState =
 	| { kind: 'scanning'; folderName: string }
 	| { kind: 'results'; projectPath: string; result: ScanResult };
 
-// The results list in the SecureFlow side panel (layout: docs/figma/03-results.png).
-// It is a "webview": a small web page inside VS Code. The page cannot touch
-// VS Code itself, so it sends messages ("open finding 3", "scan again") and
-// this class does the work.
+// The results list in the SecureFlow side panel
+
 export class ResultsView implements vscode.WebviewViewProvider {
 	public static readonly viewId = 'secureflow.results';
 
