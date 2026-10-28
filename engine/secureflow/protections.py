@@ -196,11 +196,6 @@ def checks_in_node(node, header_names):
             and last_name(node.value) == "current_user"):
         labels.append("inline:current_user." + node.attr)
 
-    # session.get("user_id"), session["user"], "user_id" in session
-    key = session_key(node)
-    if key is not None and any(word in key.lower() for word in SESSION_USER_WORDS):
-        labels.append("inline:session_user_check")
-
     if isinstance(node, ast.Call):
         called = last_name(node.func)
         # abort(401) / abort(403): "not logged in" / "not allowed"
@@ -219,7 +214,40 @@ def checks_in_node(node, header_names):
         if any(is_authorization_header(n) or (isinstance(n, ast.Name) and n.id in header_names)
                for n in ast.walk(node.test)):
             labels.append("inline:authorization_header")
+        # if "user_id" not in session: return redirect(...)  (or abort, or an error)
+        # Only a session check that can turn the visitor away counts. Just reading
+        # the user from the session, as in session.get("user_id", 1), does not
+        # stop anyone, so it is not a protection.
+        if tests_session_user(node.test) and (turns_visitor_away(node.body) or turns_visitor_away(node.orelse)):
+            labels.append("inline:session_user_check")
     return labels
+
+
+def tests_session_user(test):
+    """True if an `if` test reads a user key from the session."""
+    for node in ast.walk(test):
+        key = session_key(node)
+        if key is not None and any(word in key.lower() for word in SESSION_USER_WORDS):
+            return True
+    return False
+
+
+def turns_visitor_away(statements):
+    """True if these statements stop the request: a redirect, abort(...),
+    raise, or an error answer such as `return "no", 401`."""
+    for node in walk_list(statements):
+        if isinstance(node, ast.Raise):
+            return True
+        if isinstance(node, ast.Call) and last_name(node.func) == "abort":
+            return True
+        if isinstance(node, ast.Return) and node.value is not None:
+            value = node.value
+            if isinstance(value, ast.Call) and last_name(value.func) == "redirect":
+                return True
+            if isinstance(value, ast.Tuple) and any(
+                    isinstance(part, ast.Constant) and part.value in (401, 403) for part in value.elts):
+                return True
+    return False
 
 
 def session_key(node):

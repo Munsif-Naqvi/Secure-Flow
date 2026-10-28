@@ -28,7 +28,7 @@ def finding_for(result, url_path):
 
 def test_output_validates_against_the_schema():
     schema = load_schema()
-    for folder in ["tiny_app", "public_app", "hello_app", "locked_app", "partial_app"]:
+    for folder in ["tiny_app", "public_app", "hello_app", "locked_app", "partial_app", "session_app"]:
         assert schema_errors(run_engine(FIXTURES / folder), schema) == [], folder
 
 
@@ -36,6 +36,7 @@ def test_tiny_app_yields_exactly_the_expected_findings():
     assert flagged(TINY) == [
         ("account.py", 49, "/account/export", "Medium"),   # @login_required above the route
         ("account.py", 55, "/account/news", "Medium"),
+        ("account.py", 86, "/account/me", "Medium"),         # session["user"] is only read
         ("account.py", 116, "/account/theme", "Medium"),
         ("admin.py", 38, "/reports/sales", "Medium"),     # its hook checks nothing
         ("app.py", 23, "/items", "High"),
@@ -58,7 +59,7 @@ def test_tiny_app_yields_exactly_the_expected_findings():
 
 def test_every_finding_is_unconfirmed_and_counted_in_the_summary():
     assert {f["finding_status"] for f in TINY["findings"]} == {"unconfirmed"}
-    assert TINY["summary"] == {"suspects_found": 18, "problems_confirmed": 0}
+    assert TINY["summary"] == {"suspects_found": 19, "problems_confirmed": 0}
 
 
 # --- public allowlist and severity ------------------------------------------

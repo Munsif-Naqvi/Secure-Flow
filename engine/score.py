@@ -140,7 +140,10 @@ def results_table(scores):
         lines.append("")
         lines.append("### " + score["app"])
         if not score["missed"] and not score["false_alarms"]:
-            lines.append("All real problems found, no false alarms.")
+            if score["should_flag"]:
+                lines.append("All real problems found, no false alarms.")
+            else:
+                lines.append("No missing-login problems to find, and no false alarms.")
         for label in score["not_checked"]:
             lines.append("- Not checked yet: `" + label + "`")
         for label in score["missed"]:

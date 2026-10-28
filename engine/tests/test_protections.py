@@ -71,8 +71,31 @@ def test_redirect_to_login_inside_a_session_if():
     assert account("/wishlist") == ["inline:login_redirect"]
 
 
-def test_session_user_key_read_directly():
-    assert account("/me") == ["inline:session_user_check"]
+def test_session_user_key_only_read_is_not_a_check():
+    assert account("/me") == []
+
+
+# A session check counts only when it can turn the visitor away.
+SESSION = {route["url_path"]: route["protections_found"]
+           for route in run_engine(FIXTURES / "session_app")["routes"]}
+
+
+def test_session_read_with_a_default_user_is_not_a_check():
+    assert SESSION["/checkout"] == []
+
+
+def test_session_if_where_both_branches_show_a_page_is_not_a_check():
+    assert SESSION["/orders"] == []
+
+
+def test_session_if_that_turns_the_visitor_away_is_a_check():
+    assert SESSION["/inbox"] == ["inline:session_user_check"]     # return ..., 401
+    assert SESSION["/settings"] == ["inline:session_user_check"]  # redirect in the else branch
+    assert SESSION["/billing"] == ["inline:session_user_check"]   # raise
+
+
+def test_session_if_on_a_key_that_is_not_a_user_key_is_not_a_check():
+    assert SESSION["/theme"] == []
 
 
 def test_abort_403():
