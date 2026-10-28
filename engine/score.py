@@ -1,0 +1,161 @@
+"""SecureFlow scorer: compare the engine's findings with each app's ground truth.
+
+Usage:
+    python engine/score.py <corpus_folder>
+
+<corpus_folder> holds one sub-folder per test app (corpus/app_01_notes/, ...).
+Each app has a ground_truth.json that lists the routes that should be flagged
+and the routes that are public by design (format: docs/07-test-corpus.md).
+
+The scorer scans every app with the engine and prints a Markdown results table,
+ready to paste into docs/results-midterm.md.
+
+How a finding is matched to a ground truth entry:
+    The url_path must be equal. If the entry also lists http_methods, the
+    finding's route must share at least one of them. This keeps PUT and DELETE
+    on the same path apart when the ground truth lists them separately.
+
+Counting (per app):
+    found        should_flag entries that at least one finding matches
+    missed       should_flag entries that no finding matches
+    false alarm  findings that match no should_flag entry
+"""
+
+import json
+import os
+import sys
+
+from main import scan
+
+
+def load_ground_truth(app_folder):
+    with open(os.path.join(app_folder, "ground_truth.json"), encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def finding_methods(finding, routes):
+    """The HTTP methods of the route a finding was made for.
+
+    Findings do not carry their methods, so look up the route at the same
+    file, line and url_path in the scan's "routes" list.
+    """
+    for route in routes:
+        if (route["file_path"], route["line_number"], route["url_path"]) == (
+            finding["file_path"], finding["line_number"], finding["url_path"]
+        ):
+            return route["http_methods"]
+    return []
+
+
+def matches(entry, finding, methods):
+    """True when a ground truth entry describes the route of this finding."""
+    if entry["url_path"] != finding["url_path"]:
+        return False
+    if "http_methods" not in entry:
+        return True
+    return bool(set(entry["http_methods"]) & set(methods))
+
+
+def describe(item, methods=None):
+    """A short label such as "POST /notes/<id>/delete" for the results tables."""
+    methods = methods if methods is not None else item.get("http_methods", [])
+    return (",".join(methods) + " " if methods else "") + item["url_path"]
+
+
+def score_app(result, truth):
+    """Compare one engine result with one ground truth. Returns a dict of counts and details."""
+    should_flag = truth.get("should_flag", [])
+    public_paths = {entry["url_path"] for entry in truth.get("should_not_flag", [])}
+
+    found_entries = set()   # indexes into should_flag that some finding matched
+    false_alarms = []       # (label, reason)
+    for finding in result["findings"]:
+        methods = finding_methods(finding, result["routes"])
+        hits = [i for i, entry in enumerate(should_flag) if matches(entry, finding, methods)]
+        if hits:
+            found_entries.update(hits)
+            continue
+        if finding["url_path"] in public_paths:
+            reason = "public by design"
+        else:
+            reason = "not listed in ground truth"
+        false_alarms.append((describe(finding, methods) + " (" + finding["file_path"] + ":" + str(finding["line_number"]) + ")", reason))
+
+    missed = [describe(entry) for i, entry in enumerate(should_flag) if i not in found_entries]
+    return {
+        "app": truth.get("app", ""),
+        "should_flag": len(should_flag),
+        "found": len(found_entries),
+        "missed": missed,
+        "false_alarms": false_alarms,
+        "files_skipped": [skipped["file_path"] for skipped in result["scan"]["files_skipped"]],
+    }
+
+
+def app_folders(corpus_folder):
+    """Every sub-folder that has a ground_truth.json, sorted by name."""
+    folders = []
+    for name in sorted(os.listdir(corpus_folder)):
+        folder = os.path.join(corpus_folder, name)
+        if os.path.isfile(os.path.join(folder, "ground_truth.json")):
+            folders.append(folder)
+    return folders
+
+
+def score_corpus(corpus_folder):
+    scores = []
+    for folder in app_folders(corpus_folder):
+        truth = load_ground_truth(folder)
+        truth.setdefault("app", os.path.basename(folder))
+        scores.append(score_app(scan(folder), truth))
+    return scores
+
+
+def results_table(scores):
+    """The scores as Markdown: one summary table, then the details of each miss and false alarm."""
+    lines = [
+        "| App | Real problems | Found | Missed | False alarms |",
+        "|---|---|---|---|---|",
+    ]
+    totals = [0, 0, 0, 0]
+    for score in scores:
+        row = [score["should_flag"], score["found"], len(score["missed"]), len(score["false_alarms"])]
+        totals = [a + b for a, b in zip(totals, row)]
+        lines.append("| " + score["app"] + " | " + " | ".join(str(n) for n in row) + " |")
+    lines.append("| **Total** | " + " | ".join("**" + str(n) + "**" for n in totals) + " |")
+
+    lines.append("")
+    lines.append("## Details")
+    for score in scores:
+        lines.append("")
+        lines.append("### " + score["app"])
+        if not score["missed"] and not score["false_alarms"]:
+            lines.append("All real problems found, no false alarms.")
+        for label in score["missed"]:
+            lines.append("- Missed: `" + label + "`")
+        for label, reason in score["false_alarms"]:
+            lines.append("- False alarm: `" + label + "`, " + reason)
+        if score["files_skipped"]:
+            lines.append("- Files skipped (could not be read): " + ", ".join("`" + f + "`" for f in score["files_skipped"]))
+    return "\n".join(lines)
+
+
+def main(argv):
+    if len(argv) != 2:
+        print("Usage: python engine/score.py <corpus_folder>", file=sys.stderr)
+        return 2
+    corpus_folder = os.path.abspath(argv[1])
+    if not os.path.isdir(corpus_folder):
+        print("Not a folder: " + corpus_folder, file=sys.stderr)
+        return 2
+
+    scores = score_corpus(corpus_folder)
+    if not scores:
+        print("No app with a ground_truth.json found in " + corpus_folder, file=sys.stderr)
+        return 1
+    print(results_table(scores))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
