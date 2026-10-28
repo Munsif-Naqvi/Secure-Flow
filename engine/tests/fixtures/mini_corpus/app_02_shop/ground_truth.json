@@ -2,7 +2,8 @@
   "app": "app_02_shop",
   "should_flag": [
     { "url_path": "/item/<int:item_id>", "http_methods": ["DELETE"], "problem_type": "missing_login" },
-    { "url_path": "/admin/users", "http_methods": ["GET"], "problem_type": "missing_login" }
+    { "url_path": "/admin/users", "http_methods": ["GET"], "problem_type": "missing_login" },
+    { "url_path": "/admin/users", "http_methods": ["GET"], "problem_type": "missing_role_check" }
   ],
   "should_not_flag": [
     { "url_path": "/", "reason": "public home page" },

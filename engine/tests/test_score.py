@@ -25,11 +25,11 @@ CODE, TABLE, _ = run_score(FIXTURES / "mini_corpus")
 def test_summary_table_counts_each_app_and_the_total():
     assert CODE == 0
     assert TABLE.splitlines()[:5] == [
-        "| App | Real problems | Found | Missed | False alarms |",
-        "|---|---|---|---|---|",
-        "| app_01_notes | 1 | 1 | 0 | 0 |",
-        "| app_02_shop | 2 | 1 | 1 | 3 |",
-        "| **Total** | **3** | **2** | **1** | **3** |",
+        "| App | Real problems | Found | Missed | False alarms | Not checked yet |",
+        "|---|---|---|---|---|---|",
+        "| app_01_notes | 1 | 1 | 0 | 0 | 0 |",
+        "| app_02_shop | 2 | 1 | 1 | 3 | 1 |",
+        "| **Total** | **3** | **2** | **1** | **3** | **1** |",
     ]
 
 
@@ -44,6 +44,12 @@ def test_same_path_is_told_apart_by_http_method():
     # The ground truth lists only DELETE /item/<id>, so the PUT finding is a false alarm.
     assert "- False alarm: `PUT /item/<int:item_id> (app.py:37)`, not listed in ground truth" in TABLE
     assert "DELETE /item" not in TABLE
+
+
+def test_problem_types_the_engine_does_not_check_are_listed_apart():
+    # app_02_shop lists a missing role check; the midterm engine only checks login.
+    assert "- Not checked yet: `GET /admin/users, missing_role_check`" in TABLE
+    assert "Missed: `GET /admin/users`" in TABLE  # the missing_login entry is still missed
 
 
 def test_folder_without_ground_truth_is_an_error(tmp_path):

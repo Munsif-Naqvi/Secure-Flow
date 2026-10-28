@@ -19,6 +19,9 @@ Counting (per app):
     found        should_flag entries that at least one finding matches
     missed       should_flag entries that no finding matches
     false alarm  findings that match no should_flag entry
+    not checked  should_flag entries of a problem type the engine does not
+                 look for yet (for example missing_role_check). They are
+                 listed on their own, not counted as missed.
 """
 
 import json
@@ -26,6 +29,10 @@ import os
 import sys
 
 from main import scan
+
+# The problem types the midterm engine looks for. An entry without a
+# problem_type is treated as missing_login, like the example in docs/07.
+CHECKED_PROBLEM_TYPES = {"missing_login"}
 
 
 def load_ground_truth(app_folder):
@@ -64,7 +71,9 @@ def describe(item, methods=None):
 
 def score_app(result, truth):
     """Compare one engine result with one ground truth. Returns a dict of counts and details."""
-    should_flag = truth.get("should_flag", [])
+    all_should_flag = truth.get("should_flag", [])
+    should_flag = [e for e in all_should_flag if e.get("problem_type", "missing_login") in CHECKED_PROBLEM_TYPES]
+    not_checked = [e for e in all_should_flag if e not in should_flag]
     public_paths = {entry["url_path"] for entry in truth.get("should_not_flag", [])}
 
     found_entries = set()   # indexes into should_flag that some finding matched
@@ -88,6 +97,7 @@ def score_app(result, truth):
         "found": len(found_entries),
         "missed": missed,
         "false_alarms": false_alarms,
+        "not_checked": [describe(entry) + ", " + entry["problem_type"] for entry in not_checked],
         "files_skipped": [skipped["file_path"] for skipped in result["scan"]["files_skipped"]],
     }
 
@@ -114,12 +124,12 @@ def score_corpus(corpus_folder):
 def results_table(scores):
     """The scores as Markdown: one summary table, then the details of each miss and false alarm."""
     lines = [
-        "| App | Real problems | Found | Missed | False alarms |",
-        "|---|---|---|---|---|",
+        "| App | Real problems | Found | Missed | False alarms | Not checked yet |",
+        "|---|---|---|---|---|---|",
     ]
-    totals = [0, 0, 0, 0]
+    totals = [0, 0, 0, 0, 0]
     for score in scores:
-        row = [score["should_flag"], score["found"], len(score["missed"]), len(score["false_alarms"])]
+        row = [score["should_flag"], score["found"], len(score["missed"]), len(score["false_alarms"]), len(score["not_checked"])]
         totals = [a + b for a, b in zip(totals, row)]
         lines.append("| " + score["app"] + " | " + " | ".join(str(n) for n in row) + " |")
     lines.append("| **Total** | " + " | ".join("**" + str(n) + "**" for n in totals) + " |")
@@ -131,6 +141,8 @@ def results_table(scores):
         lines.append("### " + score["app"])
         if not score["missed"] and not score["false_alarms"]:
             lines.append("All real problems found, no false alarms.")
+        for label in score["not_checked"]:
+            lines.append("- Not checked yet: `" + label + "`")
         for label in score["missed"]:
             lines.append("- Missed: `" + label + "`")
         for label, reason in score["false_alarms"]:

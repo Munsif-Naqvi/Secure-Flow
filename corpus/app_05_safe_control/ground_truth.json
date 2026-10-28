@@ -1,0 +1,13 @@
+{
+  "app": "app_05_safe_control",
+  "should_flag": [],
+  "should_not_flag": [
+    { "url_path": "/", "reason": "public home page" },
+    { "url_path": "/public/info", "reason": "public by design (comment in the app)" },
+    { "url_path": "/login", "reason": "login page" },
+    { "url_path": "/logout", "reason": "logout page" },
+    { "url_path": "/user/profile", "reason": "protected with @login_required" },
+    { "url_path": "/admin/dashboard", "reason": "@login_required and a role check" },
+    { "url_path": "/notes/view", "reason": "@login_required and an ownership check" }
+  ]
+}
