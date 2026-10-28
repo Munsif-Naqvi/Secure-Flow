@@ -21,7 +21,7 @@ c. **Class-based protection.** For `MethodView` classes, a `decorators = [login_
 
 d. **Inline checks** inside the handler body or a before_request body: any of
    - a reference to `current_user.is_authenticated` or `current_user.is_active`
-   - `session` read for a user key: `session.get("user_id")`, `session["user"]`, `"user_id" in session` (key name containing `user`, `uid`, `login`, `auth` or `token`)
+   - an `if` that tests the session for a user key (`session.get("user_id")`, `session["user"]`, `"user_id" in session`; key name containing `user`, `uid`, `login`, `auth` or `token`) and, in either branch, turns the visitor away: a `return redirect(...)`, an `abort(...)`, a `raise`, or an error answer such as `return "...", 401` (or 403). Only reading the user from the session, as in `user_id = session.get("user_id", 1)`, is not a check, because it does not stop anyone. (Tightened in Step 6, after the corpus showed two such misses; see `docs/results-midterm.md`.)
    - a call to `abort(401)` or `abort(403)`
    - a `redirect` to a URL whose text contains `login` inside an `if` that tests the session or current_user
    - `get_jwt_identity()` or `verify_jwt_in_request()`

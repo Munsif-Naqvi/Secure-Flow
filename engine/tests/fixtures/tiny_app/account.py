@@ -82,7 +82,7 @@ def wishlist():
     return "wishlist"
 
 
-# inline:session_user_check  (session["user"] read directly)
+# none: session["user"] is only read; nothing turns the visitor away
 @account_bp.route("/me")
 def me():
     return "hello " + session["user"]

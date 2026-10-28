@@ -1,0 +1,11 @@
+{
+  "app": "app_01_notes",
+  "should_flag": [
+    { "url_path": "/notes/<int:note_id>/delete", "http_methods": ["POST"], "problem_type": "missing_login" }
+  ],
+  "should_not_flag": [
+    { "url_path": "/", "reason": "public home page" },
+    { "url_path": "/login", "reason": "login page" },
+    { "url_path": "/notes", "reason": "protected with @login_required" }
+  ]
+}

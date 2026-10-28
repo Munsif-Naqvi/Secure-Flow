@@ -1,0 +1,12 @@
+{
+  "app": "app_02_admin_cms",
+  "should_flag": [
+    { "url_path": "/admin/dashboard", "http_methods": ["GET"], "problem_type": "missing_role_check" }
+  ],
+  "should_not_flag": [
+    { "url_path": "/", "reason": "public home page" },
+    { "url_path": "/login", "reason": "login page" },
+    { "url_path": "/logout", "reason": "logout page" },
+    { "url_path": "/user/dashboard", "reason": "protected with @login_required" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "app": "app_04_blog",
+  "should_flag": [
+    { "url_path": "/post/delete/<int:post_id>", "http_methods": ["GET", "POST"], "problem_type": "missing_login" }
+  ],
+  "should_not_flag": [
+    { "url_path": "/", "reason": "public home page" },
+    { "url_path": "/login", "reason": "login page" },
+    { "url_path": "/logout", "reason": "logout page" },
+    { "url_path": "/post/create", "reason": "protected with @login_required" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "app": "app_03_idor",
+  "should_flag": [
+    { "url_path": "/user/profile", "http_methods": ["GET"], "problem_type": "missing_ownership_check" }
+  ],
+  "should_not_flag": [
+    { "url_path": "/", "reason": "public home page" },
+    { "url_path": "/login", "reason": "login page" },
+    { "url_path": "/logout", "reason": "logout page" }
+  ]
+}

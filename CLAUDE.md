@@ -47,6 +47,8 @@ If the real layout differs (for example the extension was generated at the repo 
 ## Decisions made along the way
 - **Login decorator above the route decorator (decided in Step 3/4).** Flask ignores a `@login_required` placed above `@app.route`, so the route is unprotected and is flagged as `missing_login`, even if it is on the public allowlist. The explanation adds: "A @login_required sits above the route decorator, so Flask ignores it; move it below." The engine only tells the developer; rewriting the code for them is a fix suggestion (post-midterm). Rules: `docs/03-detection-rules.md`, parts 2 and 3.
 - **`finding_match_key` is not unique within one scan (noted in Step 4/5).** Routes with the same path in the same file (for example PUT, DELETE and PATCH on `/item/<id>`) share one key. The extension's results view identifies a finding by its position in the list, not by the key.
+- **Scoring matches by path, then method (decided in Step 6).** `engine/score.py` matches a finding to a ground truth entry by `url_path`, and also by HTTP method when the entry lists `http_methods`, so PUT and DELETE on the same path are scored separately.
+- **A session check must turn the visitor away (decided in Step 6).** Rule 2d counts a session user check only inside an `if` whose branch redirects, aborts, raises or returns 401/403. Just reading `session.get("user_id", 1)` is not a protection. The corpus results before and after this change are both in `docs/results-midterm.md`.
 
 ## Words that must be used consistently
 - **Suspect**: a place in the code that looks like a problem and has not been tested.
@@ -57,6 +59,7 @@ If the real layout differs (for example the extension was generated at the repo 
 ## Commands
 - Run the engine: `python engine/main.py corpus/app_01_*/` (or any Flask folder)
 - Engine tests: `cd engine && python -m pytest`
+- Score against the corpus: `python engine/score.py corpus/` (prints the table for `docs/results-midterm.md`)
 - Extension: open `extension/` in VS Code and press F5 to launch the Extension Development Host. Build with `npm run compile` (check `package.json` for the exact scripts).
 - Package: `npx vsce package`
 

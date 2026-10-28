@@ -1,0 +1,14 @@
+{
+  "app": "app_01_ecommerce",
+  "should_flag": [
+    { "url_path": "/checkout", "http_methods": ["GET", "POST"], "problem_type": "missing_login" },
+    { "url_path": "/orders", "http_methods": ["GET"], "problem_type": "missing_login" }
+  ],
+  "should_not_flag": [
+    { "url_path": "/", "reason": "public home page" },
+    { "url_path": "/login", "reason": "login page" },
+    { "url_path": "/logout", "reason": "logout page" },
+    { "url_path": "/products", "reason": "public product list (not marked vulnerable in the app)" },
+    { "url_path": "/profile", "reason": "protected with @login_required" }
+  ]
+}
