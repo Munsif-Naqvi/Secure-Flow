@@ -1,8 +1,13 @@
 {
   "name": "secureflow",
-  "displayName": "secureflow",
-  "description": "catch security bugs before shipping you Python Flask apps",
+  "displayName": "SecureFlow",
+  "description": "Finds Flask routes with no login check, before you ship your Python Flask app",
   "version": "0.0.1",
+  "publisher": "secureflow-fyp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Munsif-Naqvi/Secure-Flow"
+  },
   "engines": {
     "vscode": "^1.140.0"
   },
@@ -47,7 +52,7 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production && node copy-engine.js",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",

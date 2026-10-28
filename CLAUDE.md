@@ -49,6 +49,7 @@ If the real layout differs (for example the extension was generated at the repo 
 - **`finding_match_key` is not unique within one scan (noted in Step 4/5).** Routes with the same path in the same file (for example PUT, DELETE and PATCH on `/item/<id>`) share one key. The extension's results view identifies a finding by its position in the list, not by the key.
 - **Scoring matches by path, then method (decided in Step 6).** `engine/score.py` matches a finding to a ground truth entry by `url_path`, and also by HTTP method when the entry lists `http_methods`, so PUT and DELETE on the same path are scored separately.
 - **A session check must turn the visitor away (decided in Step 6).** Rule 2d counts a session user check only inside an `if` whose branch redirects, aborts, raises or returns 401/403. Just reading `session.get("user_id", 1)` is not a protection. The corpus results before and after this change are both in `docs/results-midterm.md`.
+- **The engine is packed inside the .vsix (decided in Step 7).** When packaging, `extension/copy-engine.js` copies `engine/main.py` and `engine/secureflow/*.py` into `extension/engine/` (git-ignored). The installed extension runs that copy. During F5 and tests it runs the repo's `engine/` instead, so engine edits need no repackaging.
 
 ## Words that must be used consistently
 - **Suspect**: a place in the code that looks like a problem and has not been tested.

@@ -41,9 +41,7 @@ async function scanProject(context: vscode.ExtensionContext) {
 	statusBar.show();
 	resultsView.showScanning(folder.name);
 
-	// During development the engine sits next to the extension folder in the repo:
-	// <repo>/extension (this extension) and <repo>/engine/main.py.
-	const engineMain = path.join(context.extensionPath, '..', 'engine', 'main.py');
+	const engineMain = findEngine(context);
 	const projectPath = folder.uri.fsPath;
 
 	let result: ScanResult;
@@ -73,6 +71,19 @@ async function scanProject(context: vscode.ExtensionContext) {
 	updateStatusBar(result.findings.length);
 	resultsView.showResults(projectPath, result);
 	await resultsView.reveal();
+}
+
+// Where engine/main.py is.
+// - Development (F5) and tests: the engine in the repo, next to the extension folder:
+//   <repo>/extension (this extension) and <repo>/engine/main.py.
+//   So engine edits are picked up without repackaging.
+// - Installed from the .vsix: the copy packed inside the extension folder
+//   (copy-engine.js puts it there when packaging).
+function findEngine(context: vscode.ExtensionContext): string {
+	if (context.extensionMode !== vscode.ExtensionMode.Production) {
+		return path.join(context.extensionPath, '..', 'engine', 'main.py');
+	}
+	return path.join(context.extensionPath, 'engine', 'main.py');
 }
 
 // Runs `python engine/main.py <folder>` and returns what it printed.
