@@ -1,5 +1,5 @@
 # Practice app for test_score.py: one of each kind of scoring result.
-from flask import Flask
+from flask import Flask, request
 
 app = Flask(__name__)
 
@@ -15,16 +15,16 @@ def home():
     return "Shop"
 
 
-# Public by design but NOT on the allowlist: flagged, so a false alarm ("public by design").
+# Public by design but NOT on the allowlist, and it reads the database: flagged, so a false alarm ("public by design").
 @app.route("/pricing")
 def pricing():
-    return "Prices"
+    return str(db.execute("SELECT * FROM prices").fetchall())
 
 
 # Unprotected, but the ground truth does not list it: a false alarm ("not listed").
 @app.route("/status")
 def status():
-    return "OK"
+    return "OK " + request.args.get("check", "")
 
 
 # Unprotected and in should_flag: found.

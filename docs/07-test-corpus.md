@@ -22,9 +22,13 @@ Lists every route that **is** unprotected and should be flagged, and the routes 
   "should_not_flag": [
     { "url_path": "/", "reason": "public home page" },
     { "url_path": "/login", "reason": "login page" }
+  ],
+  "known_limitations": [
+    { "url_path": "/catalog", "http_methods": ["GET"], "problem_type": "missing_login", "note": "public by design, reads the database; still flagged until live verification (FYP-2)" }
   ]
 }
 ```
+`known_limitations` (optional) lists routes that are not real problems but that the code-only scan is *expected* to flag, because of a documented limit of the rules. Tests require them to be flagged, and the scorer reports them on their own line instead of counting them as false alarms.
 
 ## What each app should contain (cover all of these across the five apps)
 - Public pages (home, login, register) that must not be flagged.
@@ -43,6 +47,7 @@ Apps may be small (50–150 lines). They may be adapted from public "deliberatel
 For each app, compare the engine's `findings` with `should_flag`/`should_not_flag` by `url_path`:
 - true positive: flagged and in `should_flag`
 - false positive: flagged but in `should_not_flag` or not listed
+- known limitation: flagged and in `known_limitations` (reported apart, not a false positive)
 - missed: in `should_flag` but not flagged
 Report per app and in total, in `docs/results-midterm.md`. A small script `engine/score.py` should do this.
 

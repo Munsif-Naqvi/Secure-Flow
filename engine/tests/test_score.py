@@ -57,3 +57,30 @@ def test_folder_without_ground_truth_is_an_error(tmp_path):
     assert code == 1
     assert out == ""
     assert "No app with a ground_truth.json" in err
+
+
+def test_known_limitations_are_reported_apart_from_false_alarms(tmp_path):
+    app = tmp_path / "app_01_db"
+    app.mkdir()
+    (app / "app.py").write_text(
+        "from flask import Flask\n"
+        "app = Flask(__name__)\n"
+        "\n"
+        "@app.route('/catalog')\n"
+        "def catalog():\n"
+        "    return str(db.execute('SELECT * FROM products').fetchall())\n"
+    )
+    (app / "ground_truth.json").write_text(
+        '{"app": "app_01_db", "should_flag": [], "should_not_flag": [],'
+        ' "known_limitations": [{"url_path": "/catalog", "note": "public by design, reads the database"}]}'
+    )
+    code, table, _ = run_score(tmp_path)
+    assert code == 0
+    assert "| app_01_db | 0 | 0 | 0 | 0 | 0 |" in table  # not a false alarm
+    assert "Known limitations (flagged as expected, not counted as false alarms): 1" in table
+    assert "- Known limitation: `GET /catalog (app.py:4)`, public by design, reads the database" in table
+
+
+def test_precision_and_recall_are_printed():
+    # mini_corpus: found 2, missed 1, false alarms 3
+    assert "Precision: 0.40 (2/5), recall: 0.67 (2/3)" in TABLE

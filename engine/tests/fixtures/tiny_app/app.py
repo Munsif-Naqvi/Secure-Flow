@@ -1,6 +1,6 @@
 # Tiny sample used by test_routes.py. The engine never runs this code.
 # Each route's expected result is in the comment above it.
-from flask import Flask
+from flask import Flask, request
 from flask.views import MethodView
 
 from shop import shop_bp
@@ -28,7 +28,7 @@ def items():
 # GET /status, POST /submit, PUT /item/<id>, DELETE /item/<id>, PATCH /item/<id>
 @app.get("/status")
 def status():
-    return "ok"
+    return "ok " + request.args.get("check", "")  # reads the request: not public content
 
 
 @app.post("/submit")
@@ -55,7 +55,7 @@ def update_item(item_id):
 @app.route("/a")
 @app.route("/b")
 def two_urls():
-    return "a or b"
+    return "you opened " + request.path  # reads the request: not public content
 
 
 def about():

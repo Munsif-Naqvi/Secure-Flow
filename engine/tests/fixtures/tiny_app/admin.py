@@ -37,4 +37,4 @@ def log_report_request():
 # none
 @reports_bp.route("/sales")
 def sales():
-    return "sales"
+    return str(db.execute("SELECT * FROM sales").fetchall())  # reads the database: not public content

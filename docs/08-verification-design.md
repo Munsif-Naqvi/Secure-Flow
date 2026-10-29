@@ -19,25 +19,37 @@ Two ideas guide the design:
 
 2. **Static identity check (built now, in FYP-1).** Reading the code, the engine sets aside routes that clearly ignore who the caller is and return fixed, harmless content ("public content", see `docs/03-detection-rules.md`). It also raises the severity of routes whose names suggest sensitive actions, or whose neighbours are protected. These rules are careful: when unsure, the route is still flagged.
 
+   **Known limitation: database-backed public pages.** A route that reads the database is never treated as public content, even when it only reads a shared table such as a product catalogue. The code stage cannot tell whether a table is owned by users, so such pages are flagged (Unconfirmed). The live stage (FYP-2) resolves them by checking what the response contains and whether the tables it reads are user-owned. A schema-aware static check is a later step.
+
 3. **Differential test in the sandbox.** The sandbox calls each route three times: as an anonymous visitor, as an ordinary test user (User A), and as an admin test user. The responses are compared (logic below).
 
 4. **Check what the response contains.** The sandbox looks at the content, not only the status code:
-   - known private values planted in or read from the database copy (for example User B's email address);
+   - known private values planted in or read from the database copy (for example User B's email address). **Private values** are values from user-owned tables (tables with a user or owner column, such as `orders.user_id`) and from the users table. Values from shared tables, such as a product catalogue, are not private;
    - sensitive field names (for example `password`, `token`, `ssn`);
    - for routes that change data: whether existing rows owned by a user were changed or deleted.
 
-5. **Developer decisions.** The developer can answer "yes, this route is meant to be public". The answer is saved per project against the finding's `finding_match_key`, so the route is not asked about again. Bulk options (for example "every route in this Blueprint is public") keep the review list short.
+5. **Developer decisions.** The developer can answer "yes, this route is meant to be public", so the route is not asked about again. Bulk options (for example "every route in this Blueprint is public") keep the review list short.
+   - In FYP-1, decisions live in `<project>/.secureflow/route_decisions.json` as path patterns (for example `"/public/*"`).
+   - In FYP-2, they move into the SecureFlow database, saved per project against the finding's `finding_match_key`.
 
 ## Layer 3 logic in two steps
 
 **Step 1: is the anonymous visitor turned away?**
-If the anonymous call gets 401, 403, or a redirect to the login page, the route is protected. Done.
+If the anonymous call gets 401, 403, or a redirect to the login page, the route is protected. Done. A 200 response whose content is a login form also counts as the visitor being turned away (some apps show the login form in place instead of redirecting).
 
 **Step 2: the anonymous visitor got a normal 200. Compare the responses by identity.**
 - **The responses differ between identities** (anonymous, User A, admin). Then the route uses the caller's identity, so login matters for it. If the anonymous visitor still got content, login is not enforced. That is **confirmed**.
 - **The responses are identical for everyone.** Then the route ignores identity. The responses alone cannot say whether the route is public on purpose or is an open privileged route (an unprotected admin page also shows the same data to everyone). The verdict comes from **layer 4** (does the content include private values or sensitive fields, did data change) and from **privilege signals** (admin-style path or role names, use of admin tables, protected neighbouring routes).
 
 Layer 3 *sorts* routes. It does not decide the identical case on its own.
+
+**Results when the anonymous visitor gets 200 and the responses are identical for everyone:**
+
+| What layer 4 and the privilege signals show | Result |
+|---|---|
+| Private values in the response, or existing data changed | **Confirmed** |
+| No private values, but a privileged-looking path or handler name, or protected neighbouring routes | **Open route, is this intended?** |
+| Neither | **Public content** (informational only) |
 
 ## The ownership-check rule is separate
 "User A can read User B's record" (missing ownership check, also called IDOR) is a separate detection rule, not one of the five layers. It shares the same sandbox, test accounts and database copy. Static detection of it comes in the later FYP-1 work; live confirmation comes in FYP-2.

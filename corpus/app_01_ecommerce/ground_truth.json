@@ -10,5 +10,8 @@
     { "url_path": "/logout", "reason": "logout page" },
     { "url_path": "/products", "reason": "public product list (not marked vulnerable in the app)" },
     { "url_path": "/profile", "reason": "protected with @login_required" }
+  ],
+  "known_limitations": [
+    { "url_path": "/catalog", "http_methods": ["GET"], "problem_type": "missing_login", "note": "public by design, reads the database; still flagged until live verification (FYP-2)" }
   ]
 }

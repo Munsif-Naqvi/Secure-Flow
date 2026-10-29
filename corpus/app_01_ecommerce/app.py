@@ -44,6 +44,18 @@ def init_db():
             )
         ''')
         
+        # Table: Products (shared catalogue, not owned by any user)
+        # Added by SecureFlow (Claude) for the known_limitations case.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                price REAL NOT NULL
+            )
+        ''')
+        cursor.execute("INSERT OR IGNORE INTO products (id, name, price) VALUES (1, 'Laptop', 1200.00)")
+        cursor.execute("INSERT OR IGNORE INTO products (id, name, price) VALUES (2, 'Mouse', 25.00)")
+
         # Seed Fake Users & Data
         cursor.execute("INSERT OR IGNORE INTO users (id, username, password) VALUES (1, 'alice', 'password123')")
         cursor.execute("INSERT OR IGNORE INTO users (id, username, password) VALUES (2, 'bob', 'secret456')")
@@ -116,6 +128,19 @@ def logout():
 @app.route('/products') 
 def products():
     return "<h3>Public Product Catalog</h3><p>Item 1: Laptop - $1200</p><p>Item 2: Mouse - $25</p>"
+
+# -------------------------------------------------------------
+# KNOWN LIMITATION (added by SecureFlow, not by Maheen)
+# Public by design: the catalogue is the same for everyone and the
+# products table belongs to no user. It reads the database, so the
+# code-only scan still flags it until live verification (FYP-2).
+# -------------------------------------------------------------
+@app.route('/catalog')
+def catalog():
+    db = get_db()
+    items = db.execute('SELECT name, price FROM products').fetchall()
+    items_html = "".join([f"<li>{p['name']} - ${p['price']}</li>" for p in items])
+    return f"<h3>Product Catalog</h3><ul>{items_html}</ul>"
 
 # -------------------------------------------------------------
 # SAFE ROUTE (Properly Protected)

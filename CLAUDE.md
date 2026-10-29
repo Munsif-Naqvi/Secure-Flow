@@ -21,7 +21,8 @@ secureflow/
   docs/               project documents (read these first)
   engine/             Python engine (static analysis)
     main.py           command-line entry point
-    secureflow/       package: routes.py, protections.py, rules.py, public_routes.py
+    secureflow/       package: routes.py, protections.py, rules.py, public_routes.py,
+                      public_content.py, constants.py
     tests/            pytest tests
   extension/          VS Code extension (TypeScript, esbuild)
   corpus/             test Flask apps with ground truth (made by Maheen)
@@ -50,6 +51,9 @@ If the real layout differs (for example the extension was generated at the repo 
 - **Scoring matches by path, then method (decided in Step 6).** `engine/score.py` matches a finding to a ground truth entry by `url_path`, and also by HTTP method when the entry lists `http_methods`, so PUT and DELETE on the same path are scored separately.
 - **A session check must turn the visitor away (decided in Step 6).** Rule 2d counts a session user check only inside an `if` whose branch redirects, aborts, raises or returns 401/403. Just reading `session.get("user_id", 1)` is not a protection. The corpus results before and after this change are both in `docs/results-midterm.md`.
 - **The engine is packed inside the .vsix (decided in Step 7).** When packaging, `extension/copy-engine.js` copies `engine/main.py` and `engine/secureflow/*.py` into `extension/engine/` (git-ignored). The installed extension runs that copy. During F5 and tests it runs the repo's `engine/` instead, so engine edits need no repackaging.
+- **Public content rule (decided in the false-flags work, stage 2).** An unprotected route that only returns fixed, harmless content (no request data, session, user, database, files or other calls) is not flagged and is listed with `public_content:static_response`. The rule is strict: when unsure, flag. Word lists live in `engine/secureflow/constants.py`. Rules: `docs/03-detection-rules.md`, part 6.
+- **Database-backed public pages stay flagged (decided in the false-flags work).** Any database call disqualifies a route from the public content rule, even when the table is shared (a product list). Deciding whether a table is user-owned is a later, schema-aware step; FYP-2 resolves these live. In the corpus such routes go under `known_limitations` in `ground_truth.json`. Tests require them to be flagged, and `score.py` reports them apart from false alarms. Do not loosen a rule to hide them.
+- **Corpus additions by Claude.** `app_01_ecommerce` `GET /catalog` (known limitation) and `app_04_blog` `GET /users` (should_flag) were added for this work, not by Maheen. Both are marked with comments in the apps and noted in `corpus/README.md`.
 
 ## Words that must be used consistently
 - **Suspect**: a place in the code that looks like a problem and has not been tested.

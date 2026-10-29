@@ -1,7 +1,7 @@
 # Public allowlist and misplaced login decorators, used by test_rules.py.
 # The engine never runs this code. The comment above each route says
 # whether the missing-login rule should flag it.
-from flask import Flask
+from flask import Flask, session
 from flask_login import login_required
 from security import roles_required
 
@@ -29,7 +29,7 @@ def login():
 # flagged (Medium): open, and neither the path nor the name is public
 @app.route("/profile")
 def profile():
-    return "profile"
+    return "profile of " + session.get("name", "guest")  # reads the session: not public content
 
 
 # flagged (High): a POST route can change data
