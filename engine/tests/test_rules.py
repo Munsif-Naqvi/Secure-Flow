@@ -34,10 +34,12 @@ def test_output_validates_against_the_schema():
 
 def test_tiny_app_yields_exactly_the_expected_findings():
     assert flagged(TINY) == [
-        ("account.py", 49, "/account/export", "Medium"),   # @login_required above the route
-        ("account.py", 55, "/account/news", "Medium"),
-        ("account.py", 86, "/account/me", "Medium"),         # session["user"] is only read
-        ("account.py", 116, "/account/theme", "Medium"),
+        # The account Blueprint: 12 of its 16 counted routes are protected, so its
+        # 4 unprotected routes are High (neighbour consistency, part 7).
+        ("account.py", 49, "/account/export", "High"),     # @login_required above the route; "export"
+        ("account.py", 55, "/account/news", "High"),
+        ("account.py", 86, "/account/me", "High"),           # session["user"] is only read
+        ("account.py", 116, "/account/theme", "High"),
         ("admin.py", 38, "/reports/sales", "Medium"),     # its hook checks nothing
         ("app.py", 23, "/items", "High"),
         ("app.py", 29, "/status", "Medium"),
@@ -48,7 +50,7 @@ def test_tiny_app_yields_exactly_the_expected_findings():
         ("app.py", 55, "/a", "Medium"),
         ("app.py", 56, "/b", "Medium"),
         ("app.py", 86, "/profile", "High"),               # MethodView with post()
-        ("shop/api.py", 8, "/api/users", "Medium"),
+        ("shop/api.py", 8, "/api/users", "High"),          # "users" is a privileged word
         ("shop/api.py", 14, "/api/users", "High"),
         ("shop/views.py", 6, "/shop/", "Medium"),         # "/shop" is not on the allowlist
         ("shop/views.py", 12, "/shop/orders/<int:order_id>", "High"),
