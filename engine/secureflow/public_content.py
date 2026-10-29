@@ -40,10 +40,7 @@ MAX_TEMPLATE_DEPTH = 5
 
 def add_public_content(routes, files, project_path):
     """Label every unprotected route that only returns fixed, harmless content.
-
-    The label goes into protections_found, so the missing-login rule skips the
-    route but it is still listed in the output's `routes`.
-
+    
     Only routes the missing-login rule would flag are looked at: a protected
     route or one on the public allowlist needs no second opinion.
     """
