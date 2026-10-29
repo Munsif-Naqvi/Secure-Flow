@@ -31,6 +31,7 @@ Precision: 1.00 (4/4), recall: 1.00 (4/4)
 
 - The two old false alarms, `GET /products` (app 1) and `GET /public/info` (app 5), are gone. Both only return a fixed text, so they are now public content and appear in `routes` with `public_content:static_response`.
 - No real problem was lost: all 4 missing-login routes are still flagged, including the new `/users`.
+- Stage 3 (severity signals, part 7) changes no counts, only severities. In the corpus, `GET /users` (app 4) is High because of the privileged word `users`; no corpus group has enough protected routes for the neighbour signal.
 - `GET /catalog` is still flagged, as expected: it reads the database, and the code-only scan cannot tell that the `products` table belongs to no user. FYP-2 will resolve it by looking at the response (`docs/08-verification-design.md`).
 
 ## Before and after: the public content rule

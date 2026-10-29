@@ -21,14 +21,12 @@ import re
 
 from secureflow.constants import (
     ALLOWED_CALLS, ALLOWED_TEMPLATE_STATEMENTS, DATA_ACCESS_ATTRIBUTES, DATA_ACCESS_NAMES,
-    PRIVILEGED_WORDS, PUBLIC_CONTENT_METHODS, REQUEST_STATE_ATTRIBUTES, REQUEST_STATE_NAMES,
+    PUBLIC_CONTENT_LABEL, PUBLIC_CONTENT_METHODS, REQUEST_STATE_ATTRIBUTES, REQUEST_STATE_NAMES,
     SENSITIVE_WORDS,
 )
 from secureflow.routes import METHOD_SHORTCUTS, last_name, lookup_object
-from secureflow.rules import is_public
+from secureflow.rules import has_privileged_word, is_public
 
-# The label written into protections_found for a route that passes.
-PUBLIC_CONTENT_LABEL = "public_content:static_response"
 
 # Jinja syntax in a template: {{ expression }} and {% statement %}.
 JINJA_EXPRESSION = re.compile(r"\{\{")
@@ -104,11 +102,6 @@ def not_public_content_reason(route, files, project_path):
 # ---------------------------------------------------------------------------
 # Checks on the route and handler
 # ---------------------------------------------------------------------------
-
-def has_privileged_word(text):
-    text = text.lower()
-    return any(word in text for word in PRIVILEGED_WORDS)
-
 
 def has_sensitive_word(text):
     text = text.lower()
