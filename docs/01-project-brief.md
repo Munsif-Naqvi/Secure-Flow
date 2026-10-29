@@ -28,7 +28,9 @@ One user type: the developer. SecureFlow has no accounts or login of its own. It
 - **Publish the extension** on the VS Code Marketplace, and on Open VSX for Cursor and VSCodium. Until then it is shared as a `.vsix` file. Before publishing: create a publisher account (its ID must match `"publisher"` in `extension/package.json`), add a LICENSE file and a 128×128 PNG icon, then run `npx vsce publish` (`npx ovsx publish` for Open VSX).
 
 ## Principles
-- Never report a problem as confirmed without a live test.
+- Never report a problem as confirmed without a live test. **Confirmed** (FYP-2 only) means an attack demonstrably had impact: private data came back, or existing data changed. A route that is merely reachable without login is not a confirmed problem. In FYP-1 every result is Unconfirmed.
+- **Reachable is not the same as vulnerable.** A route that anyone can open may be public on purpose. It is a suspect to ask the developer about, not a proven problem. See `docs/08-verification-design.md`.
+- **When unsure, flag.** A response that is the same for every user does not prove a route is public: an unprotected admin page also shows the same data to everyone. So the static rules stay conservative.
 - Never change the developer's real files or database unasked.
 - Plain language in every message the developer sees.
 - Fewer, more accurate findings beat more, noisier ones.

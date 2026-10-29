@@ -54,7 +54,8 @@ If the real layout differs (for example the extension was generated at the repo 
 ## Words that must be used consistently
 - **Suspect**: a place in the code that looks like a problem and has not been tested.
 - **Unconfirmed**: a suspect from a code-only scan. This is the only status the midterm engine produces.
-- **Confirmed**: proven by a live test (FYP-2 only).
+- **Confirmed**: proven by a live test (FYP-2 only). It means an attack demonstrably had impact: private data came back, or existing data changed. A route that is merely reachable without login is NOT a confirmed problem.
+- **Reachable is not the same as vulnerable.** A route anyone can open may be public on purpose. Being reachable without login makes a route a suspect worth asking about ("open route, is this intended?"), not a proven problem. The full design for FYP-2 is in `docs/08-verification-design.md`.
 - **Finding**: a suspect with its status and explanation.
 
 ## Commands
