@@ -7,6 +7,9 @@ Rules: docs/03-detection-rules.md, parts 6 and 7.
 
 # --- Public content rule (part 6) -----------------------------------------
 
+# The label written into protections_found for a route that passes the rule.
+PUBLIC_CONTENT_LABEL = "public_content:static_response"
+
 # A public content route may only answer these HTTP methods (they only read).
 PUBLIC_CONTENT_METHODS = {"GET", "HEAD", "OPTIONS"}
 
@@ -31,11 +34,19 @@ ALLOWED_TEMPLATE_STATEMENTS = {"extends", "block", "endblock", "include"}
 # Words that must not appear in the returned text or template (lower case).
 SENSITIVE_WORDS = ["password", "passwd", "secret", "token", "api_key", "apikey", "private", "admin", "credential"]
 
-# --- Privileged words ------------------------------------------------------
+# --- Privileged words (parts 6 and 7) ---------------------------------------
 
 # A route whose path or handler name contains one of these (lower case) is
-# never public content. (Stage 3 will also use them to raise severity.)
+# never public content, and when it is flagged its severity is High.
 PRIVILEGED_WORDS = [
     "admin", "export", "download", "dump", "backup", "delete", "remove",
     "debug", "config", "internal", "manage", "users",
 ]
+
+# --- Neighbour consistency (part 7) -----------------------------------------
+
+# A group (a Blueprint, or the first part of the path) with at least this many
+# routes, of which at least this share is protected, makes each unprotected
+# route in it High: the developer probably meant to protect it too.
+NEIGHBOUR_MIN_ROUTES = 3
+NEIGHBOUR_PROTECTED_SHARE = 0.6

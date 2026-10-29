@@ -34,7 +34,7 @@ If none apply, the route is **unprotected**.
 ## 3. The rule: missing login (`missing_login`)
 Flag every unprotected route except the **public allowlist**. A route is public if its path (lowercased, trailing slash removed) is one of: `/`, `/index`, `/home`, `/login`, `/signin`, `/logout`, `/register`, `/signup`, `/forgot-password`, `/reset-password`, `/health`, `/healthz`, `/ping`, `/about`, `/contact`, `/static/...`, `/favicon.ico`; or the handler function name is one of `index`, `home`, `login`, `logout`, `register`, `signup`, `health`, `static`. Keep the list in one constants file so it is easy to change.
 
-**Severity:** High if the route accepts POST, PUT, PATCH or DELETE, or its path contains `admin`; otherwise Medium.
+**Severity:** High if the route accepts POST, PUT, PATCH or DELETE, or one of the signals in part 7 applies (a privileged word in the path or handler name, or protected neighbours); otherwise Medium. (Before part 7, only `admin` in the path raised severity; `admin` is one of the privileged words.)
 
 **Finding fields:** see `docs/04-findings.schema.json`.
 - `problem_class`: `access_control`, `problem_type`: `missing_login`
@@ -44,6 +44,7 @@ Flag every unprotected route except the **public allowlist**. A route is public 
   `This route (<METHODS> <url_path>) has no login check that SecureFlow could find. Anyone who visits it may be able to use it without logging in. This was found by reading the code and has not been tested live.`
 
   `<METHODS>` is the route's methods joined with `, ` (for example `GET, POST`).
+  If a signal from part 7 applies, its sentence is added before the last sentence.
   If a protection decorator sits above the route decorator (see part 2), one sentence is added after the first one: `A @login_required sits above the route decorator, so Flask ignores it; move it below.` The decorator is named as written in the code. With more than one: `@login_required, @roles_required('admin') sit above the route decorator, so Flask ignores them; move them below.`
 
 **Misplaced decorator on a public route.** A route with a protection decorator above its route decorator is flagged even when it is on the public allowlist, because the decorator shows the developer wanted a login check there. Rewriting the code automatically is a fix suggestion and stays post-midterm.
@@ -76,6 +77,17 @@ It is applied only to routes the missing-login rule would flag (unprotected and 
 A route that passes is not flagged. It is still listed under `routes`, with `protections_found: ["public_content:static_response"]`, so the developer can see the decision. All word lists are in `engine/secureflow/constants.py`.
 
 **A route that reads the database is never public content**, even if it only reads a shared table such as a product list. See part 4.
+
+## 7. Signals that raise severity
+These never add or remove a finding. They only make a flagged route High and add one plain sentence to its explanation, so the developer looks at it first. Thresholds and word lists are in `engine/secureflow/constants.py`.
+
+**a. Privileged words.** If the route's path or handler name contains (any case) `admin`, `export`, `download`, `dump`, `backup`, `delete`, `remove`, `debug`, `config`, `internal`, `manage` or `users`, the finding is High and gets: `The name suggests this route handles sensitive data or actions.` The same words also stop a route from being public content (part 6).
+
+**b. Neighbour consistency.** Routes are grouped by their Blueprint, or, for routes on the app itself, by the first part of the path (`/help/search` is in group `help`). Only routes that need a login decision are counted: routes on the public allowlist and public content routes are left out. If a group has **at least 3** counted routes and **at least 60%** of them are protected, each unprotected route in the group is High and gets: `N of M other routes in the same group are protected, so this one may have been missed.` (M is the number of other counted routes in the group, N how many of them are protected.)
+
+**c. Path syntax.** Paths are kept as Flask writes them, for example `/<int:id>/export`. Such a route is flagged like any other: Medium for GET, High if a signal applies (here, `export`).
+
+All findings stay `unconfirmed`.
 
 ## Later rules (FYP-1 second half, not now)
 Missing role check, access to another user's data (missing ownership check), command injection, path traversal, template injection.

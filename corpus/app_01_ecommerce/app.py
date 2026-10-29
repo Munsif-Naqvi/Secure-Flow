@@ -130,7 +130,7 @@ def products():
     return "<h3>Public Product Catalog</h3><p>Item 1: Laptop - $1200</p><p>Item 2: Mouse - $25</p>"
 
 # -------------------------------------------------------------
-# KNOWN LIMITATION (added by SecureFlow, not by Maheen)
+# KNOWN LIMITATION
 # Public by design: the catalogue is the same for everyone and the
 # products table belongs to no user. It reads the database, so the
 # code-only scan still flags it until live verification (FYP-2).
@@ -200,6 +200,20 @@ def orders():
     orders_html = "".join([f"<li>Order #{o['id']}: {o['item_name']} - ${o['amount']} ({o['status']}) - User #{o['user_id']}</li>" for o in user_orders])
     return f"<h3>Order History</h3><ul>{orders_html}</ul>"
 
+
+
+# -------------------------------------------------------------
+# VULNERABLE ROUTE (added by SecureFlow, not by Maheen)
+# Missing @login_required on a route whose name says "export":
+# anyone can download every customer's orders as CSV.
+# Tests the privileged-word signal (severity High).
+# -------------------------------------------------------------
+@app.route('/orders/export')
+def export_orders():
+    db = get_db()
+    rows = db.execute('SELECT id, user_id, item_name, amount, status FROM orders').fetchall()
+    lines = ["id,user_id,item,amount,status"] + [f"{r['id']},{r['user_id']},{r['item_name']},{r['amount']},{r['status']}" for r in rows]
+    return "\n".join(lines), 200, {"Content-Type": "text/csv"}
 
 if __name__ == '__main__':
     init_db()

@@ -15,22 +15,23 @@ Every finding is **Unconfirmed**: it comes from reading the code only.
 A finding matches a ground truth entry when the `url_path` is equal and, if the entry lists `http_methods`, the route shares one of them.
 
 ## Results (current engine)
-With the public content rule (`docs/03-detection-rules.md`, part 6). Two database routes were added to the corpus for this work: `GET /catalog` in app 1 (public by design, a known limitation) and `GET /users` in app 4 (a real missing-login problem).
+With the public content rule (`docs/03-detection-rules.md`, part 6) and the severity signals (part 7). Three routes were added to the corpus for this work: `GET /catalog` in app 1 (public by design but reads the database, a known limitation), `GET /users` in app 4 and `GET /orders/export` in app 1 (real missing-login problems; the last one tests the privileged-word signal).
 
 | App | Real problems | Found | Missed | False alarms | Not checked yet |
 |---|---|---|---|---|---|
-| app_01_ecommerce | 2 | 2 | 0 | 0 | 0 |
+| app_01_ecommerce | 3 | 3 | 0 | 0 | 0 |
 | app_02_admin_cms | 0 | 0 | 0 | 0 | 1 |
 | app_03_idor | 0 | 0 | 0 | 0 | 1 |
 | app_04_blog | 2 | 2 | 0 | 0 | 0 |
 | app_05_safe_control | 0 | 0 | 0 | 0 | 0 |
-| **Total** | **4** | **4** | **0** | **0** | **2** |
+| **Total** | **5** | **5** | **0** | **0** | **2** |
 
 Known limitations (flagged as expected, not counted as false alarms): 1
-Precision: 1.00 (4/4), recall: 1.00 (4/4)
+Precision: 1.00 (5/5), recall: 1.00 (5/5)
 
 - The two old false alarms, `GET /products` (app 1) and `GET /public/info` (app 5), are gone. Both only return a fixed text, so they are now public content and appear in `routes` with `public_content:static_response`.
-- No real problem was lost: all 4 missing-login routes are still flagged, including the new `/users`.
+- No real problem was lost: all 5 missing-login routes are still flagged, including the new `/users` and `/orders/export`.
+- Stage 3 (severity signals, part 7) changes no counts, only severities. In the corpus, `GET /users` (app 4) and `GET /orders/export` (app 1) are High because of the privileged words `users` and `export`; `GET /orders` stays Medium; no corpus group has enough protected routes for the neighbour signal.
 - `GET /catalog` is still flagged, as expected: it reads the database, and the code-only scan cannot tell that the `products` table belongs to no user. FYP-2 will resolve it by looking at the response (`docs/08-verification-design.md`).
 
 ## Before and after: the public content rule
@@ -40,6 +41,7 @@ Precision: 1.00 (4/4), recall: 1.00 (4/4)
 | Step 6 engine, original corpus | 3 | 0 | 2 | (none listed) | 0.60 (3/5) | 1.00 (3/3) |
 | Step 6 engine, corpus with the 2 new routes | 4 | 0 | 2 | 1 | 0.67 (4/6) | 1.00 (4/4) |
 | With the public content rule, same corpus | 4 | 0 | 0 | 1 | 1.00 (4/4) | 1.00 (4/4) |
+| Stage 3 engine, corpus with `/orders/export` added | 5 | 0 | 0 | 1 | 1.00 (5/5) | 1.00 (5/5) |
 
 A caution: the corpus is small (5 apps), and the rule was written knowing which two routes were false alarms. The rule is based on a general reason (the handler uses nothing about the visitor and returns a fixed text), not on these routes' names, and 21 negative cases in `engine/tests/fixtures/content_app/` check that it stays strict. It should still be checked on new apps.
 

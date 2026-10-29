@@ -2,7 +2,8 @@
   "app": "app_01_ecommerce",
   "should_flag": [
     { "url_path": "/checkout", "http_methods": ["GET", "POST"], "problem_type": "missing_login" },
-    { "url_path": "/orders", "http_methods": ["GET"], "problem_type": "missing_login" }
+    { "url_path": "/orders", "http_methods": ["GET"], "problem_type": "missing_login" },
+    { "url_path": "/orders/export", "http_methods": ["GET"], "problem_type": "missing_login" }
   ],
   "should_not_flag": [
     { "url_path": "/", "reason": "public home page" },

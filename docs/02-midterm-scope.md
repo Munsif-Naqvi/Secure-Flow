@@ -47,9 +47,9 @@ Static analysis only: no Docker, database or sandbox. Design background in `docs
 - [x] Stage 1: "Confirmed" and "reachable is not the same as vulnerable" defined in `CLAUDE.md` and the brief; `docs/08-verification-design.md` written
 - [x] Stage 2: "public content" rule. Routes that only return a fixed, harmless answer and use no request data, session, user, database or files are not flagged; they are listed in `routes` with `public_content:static_response`
 - [x] Stage 2: unit tests, including negative cases that must still be flagged (request data, session, current_user, database call, POST, URL variable, f-string with a variable, the word "secret", an "admin" path, an extra decorator)
-- [ ] Stage 3: privileged words in the path or handler name raise severity to High and add a sentence to the explanation
-- [ ] Stage 3: neighbour consistency. An unprotected route in a group (Blueprint or first path segment) of at least 3 routes where at least 60% are protected becomes High, with a sentence saying so
-- [ ] Stage 3: Flask path syntax such as `/<int:id>/export` is kept as written and still flagged when unprotected
+- [x] Stage 3: privileged words in the path or handler name raise severity to High and add a sentence to the explanation
+- [x] Stage 3: neighbour consistency. An unprotected route in a group (Blueprint or first path segment) of at least 3 routes where at least 60% are protected becomes High, with a sentence saying so
+- [x] Stage 3: Flask path syntax such as `/<int:id>/export` is kept as written and still flagged when unprotected
 - [x] Database-backed public pages stay flagged (documented limitation); corpus has `known_limitations` and the scorer reports them apart
 - [ ] Stage 4 (optional): developer-marked public routes, by `# secureflow: public` comment or `.secureflow/route_decisions.json`, documented with a warning
 - [ ] All word lists and thresholds in one constants file; all findings stay Unconfirmed; schema unchanged

@@ -51,3 +51,20 @@ def test_corpus_has_the_two_new_database_routes():
     app_04 = json.loads((CORPUS / "app_04_blog" / "ground_truth.json").read_text(encoding="utf-8"))
     assert [e["url_path"] for e in app_01["known_limitations"]] == ["/catalog"]
     assert "/users" in [e["url_path"] for e in app_04["should_flag"]]
+
+
+@pytest.mark.parametrize("app, url_path", [
+    ("app_01_ecommerce", "/orders/export"),  # "export" in the path and handler name
+    ("app_04_blog", "/users"),               # "users" in the path
+])
+def test_corpus_routes_with_a_privileged_word_are_high(app, url_path):
+    findings = [f for f in run_engine(CORPUS / app)["findings"] if f["url_path"] == url_path]
+    assert len(findings) == 1
+    assert findings[0]["severity"] == "High"
+    assert "The name suggests this route handles sensitive data or actions." in findings[0]["explanation"]
+
+
+def test_corpus_route_without_a_signal_stays_medium():
+    # GET /orders in app 1 is open but has no privileged word and no protected neighbours.
+    findings = [f for f in run_engine(CORPUS / "app_01_ecommerce")["findings"] if f["url_path"] == "/orders"]
+    assert [f["severity"] for f in findings] == ["Medium"]
