@@ -5,7 +5,7 @@ from . import shop_bp
 # GET /shop/  (prefix "/shop" + "/")
 @shop_bp.route("/")
 def shop_home():
-    return "Shop"
+    return str(db.execute("SELECT * FROM products").fetchall())  # reads the database: not public content
 
 
 # GET, DELETE /shop/orders/<int:order_id>

@@ -49,12 +49,33 @@ Flag every unprotected route except the **public allowlist**. A route is public 
 **Misplaced decorator on a public route.** A route with a protection decorator above its route decorator is flagged even when it is on the public allowlist, because the decorator shows the developer wanted a login check there. Rewriting the code automatically is a fix suggestion and stays post-midterm.
 
 ## 4. Honest limits (state these in the UI and the demo)
+- **Database-backed public pages are flagged.** A route that reads the database is never treated as public content (part 6), even if it only reads a shared table such as a product list. The code stage cannot tell whether a table is owned by users, so such pages stay flagged (Unconfirmed). The live stage (FYP-2) resolves them by checking what the response contains and whether the tables are user-owned (`docs/08-verification-design.md`). In the corpus these routes are listed under `known_limitations`.
 - The tool guesses from the code. It can flag a route that is protected in a way it cannot see (for example a protection added by a library at the web server level).
-- It cannot yet tell whether a route *should* be public beyond the allowlist.
+- It cannot yet tell whether a route *should* be public, beyond the allowlist and the strict public content rule (part 6).
 - This is why every result is Unconfirmed in FYP-1.
 
 ## 5. Stretch rule: SQL injection (`sql_injection`)
 Flag a call to `.execute(...)`, `.executemany(...)` or `text(...)` whose first argument is an f-string, a `%` formatting, a `.format()` call or a `+` concatenation that includes a value coming from `request.args`, `request.form`, `request.json`, `request.values`, `request.get_json()` or a route parameter, either directly or through a local variable assigned from one of these in the same function. Severity High. Not flagged: queries with `?` or `%s` placeholders and a separate parameter tuple.
+
+## 6. Public content (`public_content:static_response`)
+Some routes have no login check because they need none: they give the same harmless text to everyone. This rule recognises them by what the handler **does**, not by the route's name, so it works for apps with hundreds of routes. It is strict on purpose: a page that is the same for everyone is not proof that it is public (an open admin page is also the same for everyone), so when unsure, the route is still flagged.
+
+It is applied only to routes the missing-login rule would flag (unprotected and not on the public allowlist). A route is **public content** only when **all** of these are true:
+
+1. It answers only `GET`, `HEAD` or `OPTIONS`.
+2. Its path has no URL variables (no `<...>`).
+3. Its only decorators are route decorators (`@app.route`, `@bp.get`, ...). Any other decorator might change what the route does.
+4. The handler is a plain function with no arguments, and its body is one `return` (a docstring before it is allowed). Anything more (a variable, an `if`, a loop) is not trusted.
+5. It does not mention `request`, `session`, `g`, `current_user`, `.cookies` or `.headers`.
+6. It does not mention the database, files, programs or the network (`db`, `cursor`, `connection`, `os`, `subprocess`, `open`, `.execute`, `.executemany`, `.query`, `.commit`, ...), and calls nothing except `render_template`, `jsonify`, `url_for` and `make_response`, all with constant arguments. A call to any other function, including the project's own, means "not public content".
+7. It returns a constant: a string or bytes, an f-string without placeholders (`f"Open 9 to 5"`), `jsonify({...})` of a dict of constants, `render_template("x.html")` with no keyword arguments or only constant ones, or `make_response(...)` around one of these.
+8. For a template: the file is found in a `templates` folder (next to the route's file, next to the file that creates its app or Blueprint, or at the project root). It must contain no `{{ }}` expression and no `{% %}` statement other than `extends`, `block`, `endblock` and `include`. Templates it extends or includes are checked the same way. A missing file means "not public content".
+9. The returned text and the template text contain none of: `password`, `passwd`, `secret`, `token`, `api_key`, `apikey`, `private`, `admin`, `credential` (any case).
+10. Neither the path nor the handler name contains a privileged word: `admin`, `export`, `download`, `dump`, `backup`, `delete`, `remove`, `debug`, `config`, `internal`, `manage`, `users`.
+
+A route that passes is not flagged. It is still listed under `routes`, with `protections_found: ["public_content:static_response"]`, so the developer can see the decision. All word lists are in `engine/secureflow/constants.py`.
+
+**A route that reads the database is never public content**, even if it only reads a shared table such as a product list. See part 4.
 
 ## Later rules (FYP-1 second half, not now)
 Missing role check, access to another user's data (missing ownership check), command injection, path traversal, template injection.

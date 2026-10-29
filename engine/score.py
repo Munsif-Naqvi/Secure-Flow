@@ -22,6 +22,15 @@ Counting (per app):
     not checked  should_flag entries of a problem type the engine does not
                  look for yet (for example missing_role_check). They are
                  listed on their own, not counted as missed.
+    known limitation
+                 findings that match a known_limitations entry: routes that
+                 are not real problems but that the code-only scan is expected
+                 to flag (for example a public page that reads the database).
+                 They are listed on their own, not counted as false alarms.
+
+Below the table the scorer prints precision and recall for the whole corpus:
+    precision = found / (found + false alarms)   how many flags were right
+    recall    = found / (found + missed)         how many real problems were flagged
 """
 
 import json
@@ -75,20 +84,29 @@ def score_app(result, truth):
     should_flag = [e for e in all_should_flag if e.get("problem_type", "missing_login") in CHECKED_PROBLEM_TYPES]
     not_checked = [e for e in all_should_flag if e not in should_flag]
     public_paths = {entry["url_path"] for entry in truth.get("should_not_flag", [])}
+    known_limitations = truth.get("known_limitations", [])
 
     found_entries = set()   # indexes into should_flag that some finding matched
     false_alarms = []       # (label, reason)
+    known_flagged = []      # (label, note) for findings that match a known_limitations entry
+    known_matched = set()   # indexes into known_limitations that some finding matched
     for finding in result["findings"]:
         methods = finding_methods(finding, result["routes"])
         hits = [i for i, entry in enumerate(should_flag) if matches(entry, finding, methods)]
         if hits:
             found_entries.update(hits)
             continue
+        label = describe(finding, methods) + " (" + finding["file_path"] + ":" + str(finding["line_number"]) + ")"
+        known = [i for i, entry in enumerate(known_limitations) if matches(entry, finding, methods)]
+        if known:
+            known_matched.update(known)
+            known_flagged.append((label, known_limitations[known[0]].get("note", "")))
+            continue
         if finding["url_path"] in public_paths:
             reason = "public by design"
         else:
             reason = "not listed in ground truth"
-        false_alarms.append((describe(finding, methods) + " (" + finding["file_path"] + ":" + str(finding["line_number"]) + ")", reason))
+        false_alarms.append((label, reason))
 
     missed = [describe(entry) for i, entry in enumerate(should_flag) if i not in found_entries]
     return {
@@ -98,6 +116,9 @@ def score_app(result, truth):
         "missed": missed,
         "false_alarms": false_alarms,
         "not_checked": [describe(entry) + ", " + entry["problem_type"] for entry in not_checked],
+        "known_limitations": known_flagged,
+        # Expected to be flagged but were not. Not an error in the score, but worth seeing.
+        "known_not_flagged": [describe(e) for i, e in enumerate(known_limitations) if i not in known_matched],
         "files_skipped": [skipped["file_path"] for skipped in result["scan"]["files_skipped"]],
     }
 
@@ -134,6 +155,12 @@ def results_table(scores):
         lines.append("| " + score["app"] + " | " + " | ".join(str(n) for n in row) + " |")
     lines.append("| **Total** | " + " | ".join("**" + str(n) + "**" for n in totals) + " |")
 
+    found, missed, false_alarms = totals[1], totals[2], totals[3]
+    known = sum(len(score["known_limitations"]) for score in scores)
+    lines.append("")
+    lines.append("Known limitations (flagged as expected, not counted as false alarms): " + str(known))
+    lines.append("Precision: " + ratio(found, found + false_alarms) + ", recall: " + ratio(found, found + missed))
+
     lines.append("")
     lines.append("## Details")
     for score in scores:
@@ -150,9 +177,20 @@ def results_table(scores):
             lines.append("- Missed: `" + label + "`")
         for label, reason in score["false_alarms"]:
             lines.append("- False alarm: `" + label + "`, " + reason)
+        for label, note in score["known_limitations"]:
+            lines.append("- Known limitation: `" + label + "`, " + note)
+        for label in score["known_not_flagged"]:
+            lines.append("- Known limitation no longer flagged: `" + label + "`")
         if score["files_skipped"]:
             lines.append("- Files skipped (could not be read): " + ", ".join("`" + f + "`" for f in score["files_skipped"]))
     return "\n".join(lines)
+
+
+def ratio(part, whole):
+    """part / whole with two decimals, e.g. "0.67 (4/6)". "n/a" when whole is 0."""
+    if whole == 0:
+        return "n/a"
+    return "{:.2f} ({}/{})".format(part / whole, part, whole)
 
 
 def main(argv):

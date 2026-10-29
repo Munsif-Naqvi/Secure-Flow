@@ -1,7 +1,8 @@
 {
   "app": "app_04_blog",
   "should_flag": [
-    { "url_path": "/post/delete/<int:post_id>", "http_methods": ["GET", "POST"], "problem_type": "missing_login" }
+    { "url_path": "/post/delete/<int:post_id>", "http_methods": ["GET", "POST"], "problem_type": "missing_login" },
+    { "url_path": "/users", "http_methods": ["GET"], "problem_type": "missing_login" }
   ],
   "should_not_flag": [
     { "url_path": "/", "reason": "public home page" },

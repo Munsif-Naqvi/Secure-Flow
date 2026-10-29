@@ -155,6 +155,20 @@ def delete_post(post_id):
     return f"<h3>Post #{post_id} Deleted Successfully!</h3><a href='/'>Back to Blog</a>"
 
 
+
+# -------------------------------------------------------------
+# VULNERABLE ROUTE (added by SecureFlow, not by Maheen)
+# Missing @login_required on a route that reads the users table.
+# Anyone can list every account and its password.
+# -------------------------------------------------------------
+@app.route('/users')
+def list_users():
+    db = get_db()
+    users = db.execute('SELECT id, username, password FROM users').fetchall()
+    users_html = "".join([f"<li>#{u['id']} {u['username']} ({u['password']})</li>" for u in users])
+    return f"<h3>All Users</h3><ul>{users_html}</ul>"
+
+
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)

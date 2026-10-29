@@ -8,7 +8,8 @@ docs/04-findings.schema.json.
 
 Midterm step 4: the engine finds the Flask routes (secureflow/routes.py),
 detects each route's login protections (secureflow/protections.py) and lists
-them under "routes". Then the missing-login rule (secureflow/rules.py) turns
+them under "routes". Routes that only return fixed, harmless content are
+labelled as public content (secureflow/public_content.py). Then the missing-login rule (secureflow/rules.py) turns
 every unprotected, non-public route into an Unconfirmed finding.
 """
 
@@ -18,6 +19,7 @@ import sys
 from datetime import datetime, timezone
 
 from secureflow.protections import add_protections
+from secureflow.public_content import add_public_content
 from secureflow.routes import collect_files, find_routes, parse_files
 from secureflow.rules import missing_login_findings
 
@@ -52,6 +54,9 @@ def scan(project_path):
     files = collect_files(trees)
     routes = find_routes(files)
     add_protections(routes, files)
+    # Unprotected routes that only return fixed, harmless content are labelled
+    # "public_content:static_response" so the missing-login rule skips them.
+    add_public_content(routes, files, project_path)
 
     findings = missing_login_findings(routes)
 
