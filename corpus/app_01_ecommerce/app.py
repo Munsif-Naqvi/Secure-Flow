@@ -201,6 +201,20 @@ def orders():
     return f"<h3>Order History</h3><ul>{orders_html}</ul>"
 
 
+
+# -------------------------------------------------------------
+# VULNERABLE ROUTE (added by SecureFlow, not by Maheen)
+# Missing @login_required on a route whose name says "export":
+# anyone can download every customer's orders as CSV.
+# Tests the privileged-word signal (severity High).
+# -------------------------------------------------------------
+@app.route('/orders/export')
+def export_orders():
+    db = get_db()
+    rows = db.execute('SELECT id, user_id, item_name, amount, status FROM orders').fetchall()
+    lines = ["id,user_id,item,amount,status"] + [f"{r['id']},{r['user_id']},{r['item_name']},{r['amount']},{r['status']}" for r in rows]
+    return "\n".join(lines), 200, {"Content-Type": "text/csv"}
+
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
