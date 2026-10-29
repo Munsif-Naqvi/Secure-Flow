@@ -130,7 +130,7 @@ def products():
     return "<h3>Public Product Catalog</h3><p>Item 1: Laptop - $1200</p><p>Item 2: Mouse - $25</p>"
 
 # -------------------------------------------------------------
-# KNOWN LIMITATION (added by SecureFlow, not by Maheen)
+# KNOWN LIMITATION
 # Public by design: the catalogue is the same for everyone and the
 # products table belongs to no user. It reads the database, so the
 # code-only scan still flags it until live verification (FYP-2).
