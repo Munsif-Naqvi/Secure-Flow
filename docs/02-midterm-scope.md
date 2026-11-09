@@ -41,6 +41,11 @@ If time runs short, stop after step 5 and step 6 with whatever apps are ready. D
 - [ ] Results on the corpus recorded
 - [ ] `.vsix` builds and installs
 
+## Added after the midterm extension (static only)
+- [x] Developer-marked public routes, and a "Mark as public" action in the extension (`docs/03-detection-rules.md`, part 8; `docs/06-extension-ux.md`)
+- [x] Missing role check rule (`missing_role_check`, `docs/03-detection-rules.md`, part 9): `app_02` `/admin/dashboard` is now found
+- [ ] Missing ownership check (IDOR), using the database tables the route reads
+
 ## Reducing false missing-login flags (after step 7)
 Static analysis only: no Docker, database or sandbox. Design background in `docs/08-verification-design.md`.
 
@@ -51,6 +56,6 @@ Static analysis only: no Docker, database or sandbox. Design background in `docs
 - [x] Stage 3: neighbour consistency. An unprotected route in a group (Blueprint or first path segment) of at least 3 routes where at least 60% are protected becomes High, with a sentence saying so
 - [x] Stage 3: Flask path syntax such as `/<int:id>/export` is kept as written and still flagged when unprotected
 - [x] Database-backed public pages stay flagged (documented limitation); corpus has `known_limitations` and the scorer reports them apart
-- [ ] Stage 4 (optional): developer-marked public routes, by `# secureflow: public` comment or `.secureflow/route_decisions.json`, documented with a warning
+- [x] Stage 4 (optional): developer-marked public routes, by `# secureflow: public` comment or `.secureflow/route_decisions.json`, documented with a warning (`docs/03-detection-rules.md`, part 8)
 - [ ] All word lists and thresholds in one constants file; all findings stay Unconfirmed; schema unchanged
 - [ ] Corpus regression: the two false alarms (`/products`, `/public/info`) are gone, nothing in `should_flag` is lost, nothing in `should_not_flag` is flagged; precision and recall before and after recorded in `docs/results-midterm.md`

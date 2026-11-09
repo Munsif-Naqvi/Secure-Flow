@@ -4,17 +4,37 @@ First run on 2026-10-28, updated on 2026-10-29 after the public content rule, wi
 Every finding is **Unconfirmed**: it comes from reading the code only.
 
 ## How to read the table
-- **Real problems**: routes in `should_flag` with a problem the midterm engine looks for (a missing login check).
+- **Real problems**: routes in `should_flag` with a problem the engine looks for (a missing login check, and since the role check rule a missing role check).
 - **Found** (true positive): a real problem the engine flagged.
 - **Missed** (false negative): a real problem the engine did not flag.
 - **False alarm** (false positive): a flagged route that is not a real problem.
 - **Known limitation**: a flagged route that is not a real problem but that the code-only scan is *expected* to flag, because of a documented limit (a public page that reads the database, `docs/03-detection-rules.md` part 4). Listed under `known_limitations` in the ground truth, reported on its own line, not counted as a false alarm.
 - **Precision** = found / (found + false alarms): how many flags were right. **Recall** = found / (found + missed): how many real problems were flagged.
-- **Not checked yet**: real problems of a kind the midterm engine does not look for (role checks, ownership checks). They are planned for later and are not counted as missed.
+- **Not checked yet**: real problems of a kind the engine does not look for yet (ownership checks). They are planned for later and are not counted as missed.
 
-A finding matches a ground truth entry when the `url_path` is equal and, if the entry lists `http_methods`, the route shares one of them.
+A finding matches a ground truth entry when the `url_path` and the problem type are equal and, if the entry lists `http_methods`, the route shares one of them.
 
-## Results (current engine)
+## Results (current engine, with the role check rule)
+Updated on 2026-11-09. The missing role check rule (`docs/03-detection-rules.md`, part 9) now checks `missing_role_check` entries too. Routes marked public by the developer (part 8) change nothing here: no corpus app carries a mark.
+
+| App | Real problems | Found | Missed | False alarms | Not checked yet |
+|---|---|---|---|---|---|
+| app_01_ecommerce | 3 | 3 | 0 | 0 | 0 |
+| app_02_admin_cms | 1 | 1 | 0 | 0 | 0 |
+| app_03_idor | 0 | 0 | 0 | 0 | 1 |
+| app_04_blog | 2 | 2 | 0 | 0 | 0 |
+| app_05_safe_control | 0 | 0 | 0 | 0 | 0 |
+| **Total** | **6** | **6** | **0** | **0** | **1** |
+
+Known limitations (flagged as expected, not counted as false alarms): 1
+Precision: 1.00 (6/6), recall: 1.00 (6/6)
+
+- `GET /admin/dashboard` (app 2) moved from "not checked yet" to found: it has `@login_required` but no role check, so any logged-in user can read the system secrets.
+- `GET /admin/dashboard` in app 5 is not flagged: it checks `session.get('role') != 'admin'` and aborts with 403.
+- The only real problem left unchecked is the ownership check in app 3 (`/user/profile`).
+- The same caution as below applies: the rule was written knowing app 2 and app 5, so it is also tested on 13 routes in `engine/tests/fixtures/role_app/`.
+
+## Results with the severity signals (before the role check)
 With the public content rule (`docs/03-detection-rules.md`, part 6) and the severity signals (part 7). Three routes were added to the corpus for this work: `GET /catalog` in app 1 (public by design but reads the database, a known limitation), `GET /users` in app 4 and `GET /orders/export` in app 1 (real missing-login problems; the last one tests the privileged-word signal).
 
 | App | Real problems | Found | Missed | False alarms | Not checked yet |

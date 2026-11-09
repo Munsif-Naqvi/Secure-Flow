@@ -2,7 +2,7 @@
 
 Kept in one place so they are easy to read, explain and change.
 The public allowlist itself stays in public_routes.py.
-Rules: docs/03-detection-rules.md, parts 6 and 7.
+Rules: docs/03-detection-rules.md, parts 6 to 9.
 """
 
 # --- Public content rule (part 6) -----------------------------------------
@@ -33,6 +33,26 @@ ALLOWED_TEMPLATE_STATEMENTS = {"extends", "block", "endblock", "include"}
 
 # Words that must not appear in the returned text or template (lower case).
 SENSITIVE_WORDS = ["password", "passwd", "secret", "token", "api_key", "apikey", "private", "admin", "credential"]
+
+# --- Routes the developer marks as public (part 8) --------------------------
+
+# Labels written into protections_found for a route the developer marked.
+MARKED_BY_COMMENT = "developer_marked:comment"
+MARKED_BY_DECISIONS_FILE = "developer_marked:decisions_file"
+
+# Labels that mean "open on purpose", not "protected". Such routes are never
+# counted as protected neighbours (part 7b).
+PUBLIC_LABELS = {PUBLIC_CONTENT_LABEL, MARKED_BY_COMMENT, MARKED_BY_DECISIONS_FILE}
+
+# --- Missing role check (part 9) ---------------------------------------------
+
+# A login-protected route whose path, handler name or Blueprint variable name
+# contains one of these (lower case) is meant for admins, so it needs a role check.
+ADMIN_ROUTE_WORDS = ["admin", "superuser", "moderator"]
+
+# An `if` test, a decorator name or a hook that mentions one of these (lower
+# case) is taken as a role check, if it can turn the visitor away.
+ROLE_WORDS = ["role", "admin", "superuser", "staff", "permission", "privilege"]
 
 # --- Privileged words (parts 6 and 7) ---------------------------------------
 

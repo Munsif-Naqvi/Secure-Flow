@@ -1,6 +1,6 @@
 """Corpus regression: run the engine on every app in corpus/ and compare with ground_truth.json.
 
-- every missing_login route in should_flag is still flagged (no recall lost);
+- every missing_login and missing_role_check route in should_flag is still flagged (no recall lost);
 - nothing in should_not_flag is flagged;
 - every route in known_limitations IS flagged: these are documented limits of
   the code-only scan (for example a public page that reads the database), and
@@ -38,7 +38,7 @@ def test_corpus_app_matches_its_ground_truth(app):
     flagged = flagged_routes(run_engine(app))
 
     for entry in truth.get("should_flag", []):
-        if entry.get("problem_type", "missing_login") == "missing_login":
+        if entry.get("problem_type", "missing_login") in ("missing_login", "missing_role_check"):
             assert is_flagged(entry, flagged), "missed: " + entry["url_path"]
     for entry in truth.get("should_not_flag", []):
         assert not is_flagged(entry, flagged), "false alarm: " + entry["url_path"]

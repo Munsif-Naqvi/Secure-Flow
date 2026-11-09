@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { Finding, ScanResult } from './types';
+import { LastScan, MARK_PUBLIC_COMMAND, canMark } from './markPublic';
 
 // What the side panel is showing right now.
 type ViewState =
@@ -15,6 +16,8 @@ export class ResultsView implements vscode.WebviewViewProvider {
 
 	private view?: vscode.WebviewView;
 	private state: ViewState = { kind: 'noScan' };
+
+	constructor(private readonly lastScan: () => LastScan | undefined) {}
 
 	public resolveWebviewView(webviewView: vscode.WebviewView) {
 		this.view = webviewView;
@@ -41,6 +44,11 @@ export class ResultsView implements vscode.WebviewViewProvider {
 	private async onMessage(message: { type: string; index?: number }) {
 		if (message.type === 'scan') {
 			await vscode.commands.executeCommand('secureflow.scanProject');
+		} else if (message.type === 'markPublic' && this.state.kind === 'results' && message.index !== undefined) {
+			const finding = this.state.result.findings[message.index];
+			if (finding && this.lastScan()) {
+				await vscode.commands.executeCommand(MARK_PUBLIC_COMMAND, finding);
+			}
 		} else if (message.type === 'open' && this.state.kind === 'results' && message.index !== undefined) {
 			const finding = this.state.result.findings[message.index];
 			if (finding) {
@@ -55,6 +63,13 @@ export class ResultsView implements vscode.WebviewViewProvider {
 		}
 	}
 }
+
+// The kinds of problems the engine reports, with the group heading and the
+// one-line title shown on each card.
+const PROBLEM_TYPES: Record<string, { group: string; title: string }> = {
+	missing_login: { group: 'Missing login checks', title: 'No login check found' },
+	missing_role_check: { group: 'Missing role checks', title: 'Logged in, but no admin or role check found' },
+};
 
 // Opens the finding's file with the cursor on its line.
 async function openAtLine(projectPath: string, finding: Finding) {
@@ -113,7 +128,7 @@ function resultsHtml(result: ScanResult): string {
 
 	const summary = `
 		<div class="card summary">
-			<div class="headline"><span class="big">${count}</span> unprotected ${count === 1 ? 'route' : 'routes'} found</div>
+			<div class="headline"><span class="big">${count}</span> ${count === 1 ? 'suspect' : 'suspects'} found</div>
 			<p class="muted">Unconfirmed: found by reading the code, not tested live.</p>
 			<div class="stats">
 				<div><b>${result.routes.length}</b><span>Routes</span></div>
@@ -124,15 +139,24 @@ function resultsHtml(result: ScanResult): string {
 
 	let list: string;
 	if (count === 0) {
-		list = `<p class="muted">No unprotected routes found. This does not prove the app is safe.</p>`;
+		list = `<p class="muted">No suspects found. This does not prove the app is safe.</p>`;
 	} else {
 		// Each card is identified by its position in the list, not by
 		// finding_match_key: routes with the same path in the same file
 		// (for example PUT and DELETE on /item/<id>) share one match key.
-		const cards = result.findings.map((finding, index) => cardHtml(result, finding, index)).join('');
-		list = `
-			<div class="group"><span>Missing login checks</span><span class="muted">${count}</span></div>
+		// One group per kind of problem, in the order of PROBLEM_TYPES.
+		list = '';
+		for (const [problemType, text] of Object.entries(PROBLEM_TYPES)) {
+			const cards = result.findings
+				.map((finding, index) => (finding.problem_type === problemType ? cardHtml(result, finding, index) : ''))
+				.join('');
+			const groupCount = result.findings.filter((finding) => finding.problem_type === problemType).length;
+			if (groupCount > 0) {
+				list += `
+			<div class="group"><span>${text.group}</span><span class="muted">${groupCount}</span></div>
 			${cards}`;
+			}
+		}
 	}
 
 	return `${summary}${list}
@@ -146,6 +170,11 @@ function cardHtml(result: ScanResult, finding: Finding, index: number): string {
 	);
 	const methods = route ? route.http_methods.join(', ') + ' ' : '';
 	const severityClass = finding.severity === 'High' ? 'high' : 'medium';
+	// "Mark as public" adds "# secureflow: public" above the route (see markPublic.ts).
+	const markButton = canMark(finding)
+		? `<button class="secondary" data-action="markPublic" data-index="${index}" title="Adds # secureflow: public above this route and scans again">Mark as public</button>
+			<p class="muted small">Only if this route is meant for everyone. A wrong mark hides a real problem.</p>`
+		: '';
 
 	return `
 		<div class="card finding" role="button" tabindex="0" data-index="${index}" title="Open ${escapeHtml(finding.file_path)}, line ${finding.line_number}">
@@ -153,11 +182,12 @@ function cardHtml(result: ScanResult, finding: Finding, index: number): string {
 				<span class="badge ${severityClass}">${escapeHtml(finding.severity)}</span>
 				<code>${escapeHtml(methods + finding.url_path)}</code>
 			</div>
-			<div class="muted">${escapeHtml(finding.file_path)}, line ${finding.line_number} · No login check found</div>
+			<div class="muted">${escapeHtml(finding.file_path)}, line ${finding.line_number} · ${PROBLEM_TYPES[finding.problem_type]?.title ?? 'Possible problem'}</div>
 			<div class="details">
 				<span class="badge unconfirmed">Unconfirmed</span>
 				<p>${escapeHtml(finding.explanation)}</p>
 				<p class="muted">Unconfirmed means SecureFlow found this by reading the code. It has not been tested on a running copy of the app.</p>
+				${markButton}
 			</div>
 		</div>`;
 }
@@ -193,6 +223,10 @@ const STYLE = `
 	button.primary { padding: 6px 14px; border: none; border-radius: 2px; cursor: pointer; font: inherit;
 		background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 	button.primary:hover { background: var(--vscode-button-hoverBackground); }
+	button.secondary { margin-top: 6px; padding: 4px 10px; border: none; border-radius: 2px; cursor: pointer; font: inherit;
+		background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+	button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+	.small { font-size: 0.9em; }
 	.footer { margin-top: 12px; }
 `;
 
@@ -209,6 +243,11 @@ const SCRIPT = `
 	document.addEventListener('click', (event) => {
 		if (event.target.closest('[data-action="scan"]')) {
 			vscode.postMessage({ type: 'scan' });
+			return;
+		}
+		const mark = event.target.closest('[data-action="markPublic"]');
+		if (mark) {
+			vscode.postMessage({ type: 'markPublic', index: Number(mark.dataset.index) });
 			return;
 		}
 		const card = event.target.closest('.finding');

@@ -89,5 +89,51 @@ These never add or remove a finding. They only make a flagged route High and add
 
 All findings stay `unconfirmed`.
 
+## 8. Routes the developer marks as public (`developer_marked:...`)
+Some routes are public on purpose but the rules above cannot see it, for example a product list that reads the database (part 4). The developer can mark such a route as public in one of two ways. This applies only to routes the missing-login rule would flag. It is the developer's own claim, not something the engine checked.
+
+a. **Comment.** A comment line `# secureflow: public` (any case, spaces allowed) directly above a route's decorators. Only the comment lines right above the topmost decorator count; a blank line or code in between breaks the link. For `add_url_rule(...)` the comment goes directly above that call. One comment above a function marks every route decorator on that function. Label: `developer_marked:comment`.
+
+b. **Decisions file.** `<project>/.secureflow/route_decisions.json`:
+```json
+{ "public_routes": ["/catalog", "/public/*"] }
+```
+Each entry is a path written as Flask writes it, starting with `/`. A part written as `*` matches any one part of the path (anything without a `/`), so `/public/*` matches `/public/info` and `/public/<int:id>`, but not `/public/a/b`. A trailing slash is ignored. Matching is case-sensitive, as in Flask. Label: `developer_marked:decisions_file`.
+
+If the file is not valid JSON, or `public_routes` is not a list of paths starting with `/`, the whole file is ignored, the scan goes on, and the file is listed in `files_skipped` with the reason.
+
+The VS Code extension can write the comment for the developer: "Mark this route as public" on the lightbulb of a flagged route or in the results view (`docs/06-extension-ux.md`). This avoids typing mistakes: a misspelled comment such as `# securflow: public` is not a mark.
+
+**What a mark does.** The route is not flagged. It is still listed in `routes`, with its label in `protections_found`, so the decision can always be seen. A marked route is not counted as a protected neighbour (part 7b), because nothing protects it.
+
+**What a mark does not do.**
+- A route with a protection decorator above its route decorator (part 2) is still flagged, even when marked: the misplaced decorator shows the developer wanted a login check, which contradicts the mark.
+- A mark only answers the missing-login question. It never hides other kinds of findings (role checks, ownership checks) added later.
+
+A plain walkthrough of this part, the engine code and the extension action is in `docs/09-marking-routes-public.md`.
+
+**Warning (show in the docs and the demo).** A wrong mark hides a real problem. Mark a route only when it is meant for everyone, and review the marks when the route changes.
+
+## 9. The rule: missing role check (`missing_role_check`)
+A page for admins needs two checks: "is the visitor logged in?" and "is the visitor an admin?". Part 3 covers the first. This rule flags routes that have the login check but where no role check could be found, so any logged-in user may be able to use them.
+
+A route is flagged when **all** of these are true:
+1. It is **login-protected**: `protections_found` holds a real protection (part 2), not only a "public on purpose" label (`public_content:...`, `developer_marked:...`). Routes with no protection are left to the missing-login rule, so one route never gets both findings.
+2. It is **admin-style**: its path, its handler name, or the variable name of its Blueprint contains (any case) `admin`, `superuser` or `moderator`.
+3. **No role check** is found. A role check is any of:
+   - a decorator below the route decorator (or in a MethodView `decorators` list) named `admin_required`, `roles_required`, `role_required` or `permission_required`, or a home-made decorator whose name contains `role`, `admin`, `superuser`, `staff`, `permission` or `privilege`;
+   - an `if` in the handler whose test mentions one of those words (a name such as `role`, an attribute such as `current_user.is_admin` or `has_role`, or a text such as `"admin"`) and whose branch turns the visitor away, as in part 2d (a redirect, `abort(...)`, `raise`, or `return ..., 401/403`);
+   - the same kind of `if` in a `before_request` hook of the route's Blueprint, or of the app (an app hook covers every route).
+
+   Just reading the role, as in `role = session.get("role")`, is not a check, because it stops no one.
+
+**Severity:** always High (an admin page open to every logged-in user).
+
+**Explanation template:** `This route (<METHODS> <url_path>) checks that the visitor is logged in, but SecureFlow found no admin or role check. Its name suggests it is meant for admins, so any logged-in user may be able to use it. This was found by reading the code and has not been tested live.` If a role-style decorator sits above the route decorator (part 2), the misplaced-decorator sentence from part 3 is added after the first sentence.
+
+A plain walkthrough of this part is in `docs/10-missing-role-check.md`.
+
+**Honest limits.** The rule trusts names: a decorator called `@admin_check` that checks nothing hides the problem, and an admin page whose name does not say "admin" is not looked at. A role check inside a helper function that the handler calls is not seen, so such a route is flagged (when unsure, flag). Like every code-only result, these findings are Unconfirmed; FYP-2 confirms them by calling the route as an ordinary test user.
+
 ## Later rules (FYP-1 second half, not now)
-Missing role check, access to another user's data (missing ownership check), command injection, path traversal, template injection.
+Access to another user's data (missing ownership check), command injection, path traversal, template injection.
