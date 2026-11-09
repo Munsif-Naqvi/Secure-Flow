@@ -2,8 +2,8 @@
 
 protections.py has already filled `protections_found` for every route. Here
 we turn each route that has none into a finding, unless the route is on the
-public allowlist (public_routes.py) or was labelled public content
-(public_content.py). Every finding is "unconfirmed": it comes from reading the
+public allowlist (public_routes.py), was labelled public content
+(public_content.py) or was marked public by the developer (developer_marks.py). Every finding is "unconfirmed": it comes from reading the
 code only, nothing was tested live.
 
 Two signals can raise a finding to High (part 7 of the rules):
@@ -14,7 +14,7 @@ Two signals can raise a finding to High (part 7 of the rules):
 import ast
 import hashlib
 
-from secureflow.constants import NEIGHBOUR_MIN_ROUTES, NEIGHBOUR_PROTECTED_SHARE, PRIVILEGED_WORDS, PUBLIC_CONTENT_LABEL
+from secureflow.constants import NEIGHBOUR_MIN_ROUTES, NEIGHBOUR_PROTECTED_SHARE, PRIVILEGED_WORDS, PUBLIC_LABELS
 from secureflow.public_routes import PUBLIC_FUNCTION_NAMES, PUBLIC_PATH_PREFIXES, PUBLIC_PATHS
 
 # HTTP methods that change data. A route that accepts one of them is High severity.
@@ -42,8 +42,10 @@ def is_flag_candidate(route):
     return True
 
 
-def is_public_content(route):
-    return PUBLIC_CONTENT_LABEL in route.protections_found
+def is_open_on_purpose(route):
+    """True if the route's label means "public on purpose" (public content or a
+    developer mark), not "protected"."""
+    return any(label in PUBLIC_LABELS for label in route.protections_found)
 
 
 def has_privileged_word(text):
@@ -75,12 +77,12 @@ def neighbour_counts(routes):
     """For each group: (routes counted, routes protected).
 
     Only routes that need a login decision are counted: routes on the public
-    allowlist and routes labelled public content are left out, because being
-    open is expected for them.
+    allowlist, routes labelled public content and routes the developer marked
+    public are left out, because being open is expected for them.
     """
     counts = {}
     for route in routes:
-        if is_public_content(route) or not (route.protections_found or is_flag_candidate(route)):
+        if is_open_on_purpose(route) or not (route.protections_found or is_flag_candidate(route)):
             continue
         counted, protected = counts.get(group_of(route), (0, 0))
         counts[group_of(route)] = (counted + 1, protected + (1 if route.protections_found else 0))

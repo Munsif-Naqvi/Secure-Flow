@@ -89,5 +89,26 @@ These never add or remove a finding. They only make a flagged route High and add
 
 All findings stay `unconfirmed`.
 
+## 8. Routes the developer marks as public (`developer_marked:...`)
+Some routes are public on purpose but the rules above cannot see it, for example a product list that reads the database (part 4). The developer can mark such a route as public in one of two ways. This applies only to routes the missing-login rule would flag. It is the developer's own claim, not something the engine checked.
+
+a. **Comment.** A comment line `# secureflow: public` (any case, spaces allowed) directly above a route's decorators. Only the comment lines right above the topmost decorator count; a blank line or code in between breaks the link. For `add_url_rule(...)` the comment goes directly above that call. One comment above a function marks every route decorator on that function. Label: `developer_marked:comment`.
+
+b. **Decisions file.** `<project>/.secureflow/route_decisions.json`:
+```json
+{ "public_routes": ["/catalog", "/public/*"] }
+```
+Each entry is a path written as Flask writes it, starting with `/`. A part written as `*` matches any one part of the path (anything without a `/`), so `/public/*` matches `/public/info` and `/public/<int:id>`, but not `/public/a/b`. A trailing slash is ignored. Matching is case-sensitive, as in Flask. Label: `developer_marked:decisions_file`.
+
+If the file is not valid JSON, or `public_routes` is not a list of paths starting with `/`, the whole file is ignored, the scan goes on, and the file is listed in `files_skipped` with the reason.
+
+**What a mark does.** The route is not flagged. It is still listed in `routes`, with its label in `protections_found`, so the decision can always be seen. A marked route is not counted as a protected neighbour (part 7b), because nothing protects it.
+
+**What a mark does not do.**
+- A route with a protection decorator above its route decorator (part 2) is still flagged, even when marked: the misplaced decorator shows the developer wanted a login check, which contradicts the mark.
+- A mark only answers the missing-login question. It never hides other kinds of findings (role checks, ownership checks) added later.
+
+**Warning (show in the docs and the demo).** A wrong mark hides a real problem. Mark a route only when it is meant for everyone, and review the marks when the route changes.
+
 ## Later rules (FYP-1 second half, not now)
 Missing role check, access to another user's data (missing ownership check), command injection, path traversal, template injection.
