@@ -14,8 +14,12 @@ PUBLIC = run_engine(FIXTURES / "public_app")
 
 
 def flagged(result):
-    """[(file_path, line_number, url_path, severity)] for every finding."""
-    return [(f["file_path"], f["line_number"], f["url_path"], f["severity"]) for f in result["findings"]]
+    """[(file_path, line_number, url_path, severity)] for every missing_login finding.
+
+    The role-check rule (part 9) is tested in test_role_check.py.
+    """
+    return [(f["file_path"], f["line_number"], f["url_path"], f["severity"])
+            for f in result["findings"] if f["problem_type"] == "missing_login"]
 
 
 def finding_for(result, url_path):
@@ -61,7 +65,8 @@ def test_tiny_app_yields_exactly_the_expected_findings():
 
 def test_every_finding_is_unconfirmed_and_counted_in_the_summary():
     assert {f["finding_status"] for f in TINY["findings"]} == {"unconfirmed"}
-    assert TINY["summary"] == {"suspects_found": 19, "problems_confirmed": 0}
+    # 19 missing_login + 2 missing_role_check (the admin Blueprint, part 9).
+    assert TINY["summary"] == {"suspects_found": 21, "problems_confirmed": 0}
 
 
 # --- public allowlist and severity ------------------------------------------

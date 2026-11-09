@@ -39,7 +39,8 @@ def update_item(item_id):
     return "Updated"
 
 
-# The engine trusts @admin_check, so this real problem is missed.
+# The engine trusts @admin_check as a login check and as a role check,
+# so both real problems here (missing login, missing role check) are missed.
 @app.route("/admin/users")
 @admin_check
 def list_users():

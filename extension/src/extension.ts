@@ -175,12 +175,12 @@ function showFindings(projectPath: string, findings: Finding[]) {
 	log.appendLine(`Scan finished: ${findings.length} finding(s).`);
 }
 
-// "SecureFlow: 3 unprotected routes", or "SecureFlow: no problems found".
+// "SecureFlow: 3 suspects", or "SecureFlow: no problems found".
 function updateStatusBar(count: number) {
 	if (count === 0) {
 		statusBar.text = '$(shield) SecureFlow: no problems found';
 	} else {
-		statusBar.text = `$(shield) SecureFlow: ${count} unprotected ${count === 1 ? 'route' : 'routes'}`;
+		statusBar.text = `$(shield) SecureFlow: ${count} ${count === 1 ? 'suspect' : 'suspects'}`;
 	}
 	statusBar.tooltip = 'Unconfirmed: found by reading the code, not tested live. Click to see the results.';
 	statusBar.show();
