@@ -32,6 +32,9 @@ Answers the missing-login question for a route that is public on purpose (rule: 
 - Not offered when a login decorator sits above the route decorator: the engine keeps such a route flagged, so the mark would do nothing.
 - Only one route at a time, on purpose: there is no bulk "mark all" action, so each route is looked at before it is marked.
 
+## Problem types
+Findings are grouped by `problem_type` in the results view: "Missing login checks" (card title "No login check found") and "Missing role checks" ("Logged in, but no admin or role check found"). The summary card and status bar count all of them as suspects: "<N> suspects found", `SecureFlow: <N> suspects`.
+
 ## Status bar
 `SecureFlow: <N> unprotected routes` (or `SecureFlow: no problems found`). Clicking it opens the results.
 

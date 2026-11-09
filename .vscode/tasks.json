@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // Used by "Launch Extension" (F5 from the repo root).
+            "label": "Build extension",
+            "type": "shell",
+            "command": "npm run compile",
+            "options": { "cwd": "${workspaceFolder}/extension" },
+            "problemMatcher": ["$tsc"],
+            "presentation": { "reveal": "silent" }
+        }
+    ]
+}

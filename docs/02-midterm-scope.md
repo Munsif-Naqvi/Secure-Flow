@@ -41,6 +41,11 @@ If time runs short, stop after step 5 and step 6 with whatever apps are ready. D
 - [ ] Results on the corpus recorded
 - [ ] `.vsix` builds and installs
 
+## Added after the midterm extension (static only)
+- [x] Developer-marked public routes, and a "Mark as public" action in the extension (`docs/03-detection-rules.md`, part 8; `docs/06-extension-ux.md`)
+- [x] Missing role check rule (`missing_role_check`, `docs/03-detection-rules.md`, part 9): `app_02` `/admin/dashboard` is now found
+- [ ] Missing ownership check (IDOR), using the database tables the route reads
+
 ## Reducing false missing-login flags (after step 7)
 Static analysis only: no Docker, database or sandbox. Design background in `docs/08-verification-design.md`.
 

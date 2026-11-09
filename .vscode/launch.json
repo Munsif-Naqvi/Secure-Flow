@@ -8,7 +8,13 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}/extension"
-            ]
+            ],
+            "outFiles": [
+                "${workspaceFolder}/extension/dist/**/*.js"
+            ],
+            // Rebuild extension/dist before launching, so F5 from the repo root
+            // always runs the current extension code (not an old build).
+            "preLaunchTask": "Build extension"
         }
     ]
 }
