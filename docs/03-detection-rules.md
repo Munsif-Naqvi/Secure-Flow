@@ -102,6 +102,8 @@ Each entry is a path written as Flask writes it, starting with `/`. A part writt
 
 If the file is not valid JSON, or `public_routes` is not a list of paths starting with `/`, the whole file is ignored, the scan goes on, and the file is listed in `files_skipped` with the reason.
 
+The VS Code extension can write the comment for the developer: "Mark this route as public" on the lightbulb of a flagged route or in the results view (`docs/06-extension-ux.md`). This avoids typing mistakes: a misspelled comment such as `# securflow: public` is not a mark.
+
 **What a mark does.** The route is not flagged. It is still listed in `routes`, with its label in `protections_found`, so the decision can always be seen. A marked route is not counted as a protected neighbour (part 7b), because nothing protects it.
 
 **What a mark does not do.**

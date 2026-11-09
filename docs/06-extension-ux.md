@@ -24,8 +24,16 @@ Source of truth for layout: the Figma screens (export Main, 02-Scanning, 03-Resu
 - Selecting a finding shows its `explanation` and the note about unconfirmed results.
 - If there are no findings: "No unprotected routes found. This does not prove the app is safe."
 
+## Mark a route as public (added after the midterm extension)
+Answers the missing-login question for a route that is public on purpose (rule: `docs/03-detection-rules.md`, part 8).
+- The lightbulb on a SecureFlow underline offers "SecureFlow: Mark this route as public". The selected finding in the results view has a "Mark as public" button with the note "Only if this route is meant for everyone. A wrong mark hides a real problem."
+- The action writes `# secureflow: public` directly above the route's topmost decorator (or above the `add_url_rule` call), with the same indentation, saves the file and scans again. The edit is one undo step.
+- If the file has unsaved changes or changed since the scan, nothing is written: "<file> changed since the scan. Save it and scan again before marking a route."
+- Not offered when a login decorator sits above the route decorator: the engine keeps such a route flagged, so the mark would do nothing.
+- Only one route at a time, on purpose: there is no bulk "mark all" action, so each route is looked at before it is marked.
+
 ## Status bar
 `SecureFlow: <N> unprotected routes` (or `SecureFlow: no problems found`). Clicking it opens the results.
 
 ## Out of scope for the midterm
-Cancel button, Docker messages, test setup screen, fix preview, report export, history, hover card.
+Cancel button, Docker messages, test setup screen, fix preview, report export, history, hover card. (The "Mark as public" action above is the only place the extension writes to the developer's files, and only when clicked.)

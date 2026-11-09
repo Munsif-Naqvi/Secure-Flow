@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { Finding, ScanResult } from './types';
+import { LastScan, MARK_PUBLIC_COMMAND, canMark } from './markPublic';
 
 // What the side panel is showing right now.
 type ViewState =
@@ -15,6 +16,8 @@ export class ResultsView implements vscode.WebviewViewProvider {
 
 	private view?: vscode.WebviewView;
 	private state: ViewState = { kind: 'noScan' };
+
+	constructor(private readonly lastScan: () => LastScan | undefined) {}
 
 	public resolveWebviewView(webviewView: vscode.WebviewView) {
 		this.view = webviewView;
@@ -41,6 +44,11 @@ export class ResultsView implements vscode.WebviewViewProvider {
 	private async onMessage(message: { type: string; index?: number }) {
 		if (message.type === 'scan') {
 			await vscode.commands.executeCommand('secureflow.scanProject');
+		} else if (message.type === 'markPublic' && this.state.kind === 'results' && message.index !== undefined) {
+			const finding = this.state.result.findings[message.index];
+			if (finding && this.lastScan()) {
+				await vscode.commands.executeCommand(MARK_PUBLIC_COMMAND, finding);
+			}
 		} else if (message.type === 'open' && this.state.kind === 'results' && message.index !== undefined) {
 			const finding = this.state.result.findings[message.index];
 			if (finding) {
@@ -146,6 +154,11 @@ function cardHtml(result: ScanResult, finding: Finding, index: number): string {
 	);
 	const methods = route ? route.http_methods.join(', ') + ' ' : '';
 	const severityClass = finding.severity === 'High' ? 'high' : 'medium';
+	// "Mark as public" adds "# secureflow: public" above the route (see markPublic.ts).
+	const markButton = canMark(finding)
+		? `<button class="secondary" data-action="markPublic" data-index="${index}" title="Adds # secureflow: public above this route and scans again">Mark as public</button>
+			<p class="muted small">Only if this route is meant for everyone. A wrong mark hides a real problem.</p>`
+		: '';
 
 	return `
 		<div class="card finding" role="button" tabindex="0" data-index="${index}" title="Open ${escapeHtml(finding.file_path)}, line ${finding.line_number}">
@@ -158,6 +171,7 @@ function cardHtml(result: ScanResult, finding: Finding, index: number): string {
 				<span class="badge unconfirmed">Unconfirmed</span>
 				<p>${escapeHtml(finding.explanation)}</p>
 				<p class="muted">Unconfirmed means SecureFlow found this by reading the code. It has not been tested on a running copy of the app.</p>
+				${markButton}
 			</div>
 		</div>`;
 }
@@ -193,6 +207,10 @@ const STYLE = `
 	button.primary { padding: 6px 14px; border: none; border-radius: 2px; cursor: pointer; font: inherit;
 		background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 	button.primary:hover { background: var(--vscode-button-hoverBackground); }
+	button.secondary { margin-top: 6px; padding: 4px 10px; border: none; border-radius: 2px; cursor: pointer; font: inherit;
+		background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+	button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+	.small { font-size: 0.9em; }
 	.footer { margin-top: 12px; }
 `;
 
@@ -209,6 +227,11 @@ const SCRIPT = `
 	document.addEventListener('click', (event) => {
 		if (event.target.closest('[data-action="scan"]')) {
 			vscode.postMessage({ type: 'scan' });
+			return;
+		}
+		const mark = event.target.closest('[data-action="markPublic"]');
+		if (mark) {
+			vscode.postMessage({ type: 'markPublic', index: Number(mark.dataset.index) });
 			return;
 		}
 		const card = event.target.closest('.finding');
