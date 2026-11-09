@@ -110,6 +110,8 @@ The VS Code extension can write the comment for the developer: "Mark this route 
 - A route with a protection decorator above its route decorator (part 2) is still flagged, even when marked: the misplaced decorator shows the developer wanted a login check, which contradicts the mark.
 - A mark only answers the missing-login question. It never hides other kinds of findings (role checks, ownership checks) added later.
 
+A plain walkthrough of this part, the engine code and the extension action is in `docs/09-marking-routes-public.md`.
+
 **Warning (show in the docs and the demo).** A wrong mark hides a real problem. Mark a route only when it is meant for everyone, and review the marks when the route changes.
 
 ## 9. The rule: missing role check (`missing_role_check`)
