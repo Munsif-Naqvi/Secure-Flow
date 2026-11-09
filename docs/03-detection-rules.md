@@ -131,6 +131,8 @@ A route is flagged when **all** of these are true:
 
 **Explanation template:** `This route (<METHODS> <url_path>) checks that the visitor is logged in, but SecureFlow found no admin or role check. Its name suggests it is meant for admins, so any logged-in user may be able to use it. This was found by reading the code and has not been tested live.` If a role-style decorator sits above the route decorator (part 2), the misplaced-decorator sentence from part 3 is added after the first sentence.
 
+A plain walkthrough of this part is in `docs/10-missing-role-check.md`.
+
 **Honest limits.** The rule trusts names: a decorator called `@admin_check` that checks nothing hides the problem, and an admin page whose name does not say "admin" is not looked at. A role check inside a helper function that the handler calls is not seen, so such a route is flagged (when unsure, flag). Like every code-only result, these findings are Unconfirmed; FYP-2 confirms them by calling the route as an ordinary test user.
 
 ## Later rules (FYP-1 second half, not now)
