@@ -208,6 +208,7 @@ def orders():
 # anyone can download every customer's orders as CSV.
 # Tests the privileged-word signal (severity High).
 # -------------------------------------------------------------
+
 @app.route('/orders/export')
 def export_orders():
     db = get_db()
