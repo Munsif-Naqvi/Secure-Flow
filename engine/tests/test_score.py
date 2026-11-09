@@ -28,8 +28,8 @@ def test_summary_table_counts_each_app_and_the_total():
         "| App | Real problems | Found | Missed | False alarms | Not checked yet |",
         "|---|---|---|---|---|---|",
         "| app_01_notes | 1 | 1 | 0 | 0 | 0 |",
-        "| app_02_shop | 2 | 1 | 1 | 3 | 1 |",
-        "| **Total** | **3** | **2** | **1** | **3** | **1** |",
+        "| app_02_shop | 3 | 1 | 2 | 3 | 1 |",
+        "| **Total** | **4** | **2** | **2** | **3** | **1** |",
     ]
 
 
@@ -47,9 +47,11 @@ def test_same_path_is_told_apart_by_http_method():
 
 
 def test_problem_types_the_engine_does_not_check_are_listed_apart():
-    # app_02_shop lists a missing role check; the midterm engine only checks login.
-    assert "- Not checked yet: `GET /admin/users, missing_role_check`" in TABLE
-    assert "Missed: `GET /admin/users`" in TABLE  # the missing_login entry is still missed
+    # app_02_shop lists a missing ownership check, which the engine does not check yet.
+    assert "- Not checked yet: `GET /admin/users, missing_ownership_check`" in TABLE
+    # Login and role checks are checked: both entries for /admin/users are missed
+    # (the engine trusts @admin_check), and each is listed once.
+    assert TABLE.count("- Missed: `GET /admin/users`") == 2
 
 
 def test_folder_without_ground_truth_is_an_error(tmp_path):
@@ -82,5 +84,5 @@ def test_known_limitations_are_reported_apart_from_false_alarms(tmp_path):
 
 
 def test_precision_and_recall_are_printed():
-    # mini_corpus: found 2, missed 1, false alarms 3
-    assert "Precision: 0.40 (2/5), recall: 0.67 (2/3)" in TABLE
+    # mini_corpus: found 2, missed 2, false alarms 3
+    assert "Precision: 0.40 (2/5), recall: 0.50 (2/4)" in TABLE

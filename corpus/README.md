@@ -10,6 +10,7 @@ The five apps were written by Maheen Arshad for this project, in
 
 **Later additions (by SecureFlow, not by Maheen).** Two database routes were added for the "reduce false missing-login flags" work. Each is marked with a comment in the app:
 - `app_01_ecommerce`: `GET /catalog` and a `products` table. It is public by design but reads the database, so the code-only scan still flags it. It is listed under `known_limitations`.
+- `app_01_ecommerce`: `GET /orders/export`, with no login check, downloads every order as CSV. It is listed under `should_flag` and tests the privileged-word signal (severity High).
 - `app_04_blog`: `GET /users`, with no login check, lists every account from the users table. It is listed under `should_flag`.
 
 | Folder | Original | What it tests |

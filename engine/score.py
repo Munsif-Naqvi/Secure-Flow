@@ -11,8 +11,9 @@ The scorer scans every app with the engine and prints a Markdown results table,
 ready to paste into docs/results-midterm.md.
 
 How a finding is matched to a ground truth entry:
-    The url_path must be equal. If the entry also lists http_methods, the
-    finding's route must share at least one of them. This keeps PUT and DELETE
+    The url_path must be equal, and so must the problem type (an entry
+    without one means missing_login). If the entry also lists http_methods,
+    the finding's route must share at least one of them. This keeps PUT and DELETE
     on the same path apart when the ground truth lists them separately.
 
 Counting (per app):
@@ -20,7 +21,7 @@ Counting (per app):
     missed       should_flag entries that no finding matches
     false alarm  findings that match no should_flag entry
     not checked  should_flag entries of a problem type the engine does not
-                 look for yet (for example missing_role_check). They are
+                 look for yet (for example missing_ownership_check). They are
                  listed on their own, not counted as missed.
     known limitation
                  findings that match a known_limitations entry: routes that
@@ -39,9 +40,9 @@ import sys
 
 from main import scan
 
-# The problem types the midterm engine looks for. An entry without a
+# The problem types the engine looks for. An entry without a
 # problem_type is treated as missing_login, like the example in docs/07.
-CHECKED_PROBLEM_TYPES = {"missing_login"}
+CHECKED_PROBLEM_TYPES = {"missing_login", "missing_role_check"}
 
 
 def load_ground_truth(app_folder):
@@ -66,6 +67,8 @@ def finding_methods(finding, routes):
 def matches(entry, finding, methods):
     """True when a ground truth entry describes the route of this finding."""
     if entry["url_path"] != finding["url_path"]:
+        return False
+    if entry.get("problem_type", "missing_login") != finding["problem_type"]:
         return False
     if "http_methods" not in entry:
         return True
@@ -170,7 +173,7 @@ def results_table(scores):
             if score["should_flag"]:
                 lines.append("All real problems found, no false alarms.")
             else:
-                lines.append("No missing-login problems to find, and no false alarms.")
+                lines.append("No problems to find, and no false alarms.")
         for label in score["not_checked"]:
             lines.append("- Not checked yet: `" + label + "`")
         for label in score["missed"]:

@@ -2,12 +2,14 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import { ResultsView } from './resultsView';
+import { LastScan, MARK_PUBLIC_COMMAND, MarkPublicActions, markPublic } from './markPublic';
 import { Finding, ScanResult } from './types';
 
 let diagnostics: vscode.DiagnosticCollection;
 let log: vscode.OutputChannel;
 let statusBar: vscode.StatusBarItem;
 let resultsView: ResultsView;
+let lastScan: LastScan | undefined; // what the last successful scan found
 
 export function activate(context: vscode.ExtensionContext) {
 	diagnostics = vscode.languages.createDiagnosticCollection('SecureFlow');
@@ -17,7 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
 	statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
 	statusBar.command = 'secureflow.showResults';
 
-	resultsView = new ResultsView();
+	resultsView = new ResultsView(() => lastScan);
 
 	context.subscriptions.push(
 		diagnostics,
@@ -25,7 +27,14 @@ export function activate(context: vscode.ExtensionContext) {
 		statusBar,
 		vscode.window.registerWebviewViewProvider(ResultsView.viewId, resultsView),
 		vscode.commands.registerCommand('secureflow.scanProject', () => scanProject(context)),
-		vscode.commands.registerCommand('secureflow.showResults', () => resultsView.reveal())
+		vscode.commands.registerCommand('secureflow.showResults', () => resultsView.reveal()),
+		// "Mark this route as public": from the lightbulb on an underline, or the results view.
+		vscode.commands.registerCommand(MARK_PUBLIC_COMMAND, (finding: Finding) => markAndRescan(context, finding)),
+		vscode.languages.registerCodeActionsProvider(
+			{ language: 'python', scheme: 'file' },
+			new MarkPublicActions(() => lastScan),
+			{ providedCodeActionKinds: MarkPublicActions.kinds }
+		)
 	);
 }
 
@@ -37,6 +46,8 @@ async function scanProject(context: vscode.ExtensionContext) {
 	}
 
 	diagnostics.clear();
+	lastScan = undefined;
+	const startedAt = Date.now();
 	statusBar.text = '$(sync~spin) SecureFlow: scanning';
 	statusBar.show();
 	resultsView.showScanning(folder.name);
@@ -67,10 +78,31 @@ async function scanProject(context: vscode.ExtensionContext) {
 		return;
 	}
 
+	lastScan = {
+		projectPath,
+		startedAt,
+		findings: result.findings,
+		fileOf: (finding) => path.join(projectPath, finding.file_path),
+	};
 	showFindings(projectPath, result.findings);
 	updateStatusBar(result.findings.length);
 	resultsView.showResults(projectPath, result);
 	await resultsView.reveal();
+}
+
+// Writes "# secureflow: public" above the finding's route, then scans again
+// so the route leaves the list.
+async function markAndRescan(context: vscode.ExtensionContext, finding: Finding) {
+	if (!lastScan) {
+		vscode.window.showInformationMessage('Run SecureFlow: Scan Project first.');
+		return;
+	}
+	if (await markPublic(lastScan, finding)) {
+		await scanProject(context);
+		vscode.window.showInformationMessage(
+			`Marked ${finding.url_path} as public. A wrong mark hides a real problem: delete the comment to undo it.`
+		);
+	}
 }
 
 // Where engine/main.py is.
@@ -143,12 +175,12 @@ function showFindings(projectPath: string, findings: Finding[]) {
 	log.appendLine(`Scan finished: ${findings.length} finding(s).`);
 }
 
-// "SecureFlow: 3 unprotected routes", or "SecureFlow: no problems found".
+// "SecureFlow: 3 suspects", or "SecureFlow: no problems found".
 function updateStatusBar(count: number) {
 	if (count === 0) {
 		statusBar.text = '$(shield) SecureFlow: no problems found';
 	} else {
-		statusBar.text = `$(shield) SecureFlow: ${count} unprotected ${count === 1 ? 'route' : 'routes'}`;
+		statusBar.text = `$(shield) SecureFlow: ${count} ${count === 1 ? 'suspect' : 'suspects'}`;
 	}
 	statusBar.tooltip = 'Unconfirmed: found by reading the code, not tested live. Click to see the results.';
 	statusBar.show();
