@@ -162,6 +162,8 @@ A route is flagged when **all** of these are true:
 
 One route gets at most one ownership finding, for the first such query. It can also get a role check finding (part 9); they are different problems.
 
+A plain walkthrough of this part is in `docs/11-missing-ownership-check.md`.
+
 **Honest limits.**
 - Only raw SQL through `.execute(...)` is read. ORM queries such as SQLAlchemy's `Note.query.get(note_id)` or `db.session.get(Note, id)` are not looked at yet, so such IDORs are missed.
 - Tables created outside the project's code (migrations run elsewhere, an existing database) are unknown, so their routes are not flagged.
