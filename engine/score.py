@@ -42,7 +42,7 @@ from main import scan
 
 # The problem types the engine looks for. An entry without a
 # problem_type is treated as missing_login, like the example in docs/07.
-CHECKED_PROBLEM_TYPES = {"missing_login", "missing_role_check"}
+CHECKED_PROBLEM_TYPES = {"missing_login", "missing_role_check", "missing_ownership_check"}
 
 
 def load_ground_truth(app_folder):

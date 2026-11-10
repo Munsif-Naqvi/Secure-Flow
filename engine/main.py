@@ -13,7 +13,8 @@ labelled as public content (secureflow/public_content.py), and routes the
 developer marked as public are labelled too (secureflow/developer_marks.py). Then the missing-login rule (secureflow/rules.py) turns
 every unprotected, non-public route into an Unconfirmed finding, and the
 role-check rule (secureflow/role_check.py) flags admin-style routes that check
-the login but not the role.
+the login but not the role. The ownership-check rule (secureflow/ownership_check.py)
+flags logged-in routes that open another user's record by a visitor-chosen value.
 """
 
 import json
@@ -22,6 +23,7 @@ import sys
 from datetime import datetime, timezone
 
 from secureflow.developer_marks import add_developer_marks
+from secureflow.ownership_check import missing_ownership_findings
 from secureflow.protections import add_protections
 from secureflow.public_content import add_public_content
 from secureflow.routes import collect_files, find_routes, parse_files
@@ -69,6 +71,9 @@ def scan(project_path):
     findings = missing_login_findings(routes)
     # Admin-style routes that check the login but not the role (rules part 9).
     findings += missing_role_findings(routes, files)
+    # Logged-in routes that open a user's record by a visitor-chosen value,
+    # with no check that the record belongs to the visitor (rules part 10).
+    findings += missing_ownership_findings(routes, files, project_path)
     # Keep the list in code order (file, then line), whatever rule found each one.
     findings.sort(key=lambda finding: (finding["file_path"], finding["line_number"]))
 
