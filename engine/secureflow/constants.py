@@ -2,7 +2,7 @@
 
 Kept in one place so they are easy to read, explain and change.
 The public allowlist itself stays in public_routes.py.
-Rules: docs/03-detection-rules.md, parts 6 to 9.
+Rules: docs/03-detection-rules.md, parts 6 to 10.
 """
 
 # --- Public content rule (part 6) -----------------------------------------
@@ -70,3 +70,29 @@ PRIVILEGED_WORDS = [
 # route in it High: the developer probably meant to protect it too.
 NEIGHBOUR_MIN_ROUTES = 3
 NEIGHBOUR_PROTECTED_SHARE = 0.6
+
+# --- Missing ownership check (part 10) ---------------------------------------
+
+# A table with one of these names holds the users themselves, so each row is
+# one user's private data (lower case).
+USER_TABLE_NAMES = {"user", "users", "account", "accounts"}
+
+# A column with one of these names says which user a row belongs to (lower
+# case). A column that REFERENCES a users table counts too.
+OWNER_COLUMNS = {"user_id", "owner_id", "author_id", "account_id", "customer_id", "created_by"}
+
+# Where a visitor-chosen value can come from: request.<key>, and how the
+# explanation names it. request.get_json() counts as "json".
+VISITOR_SOURCES = {
+    "args": "from the query string",
+    "form": "from the form",
+    "values": "from the request",
+    "json": "from the JSON body",
+}
+
+# current_user.<one of these> only says whether someone is logged in, not who.
+LOGIN_STATE_ATTRIBUTES = {"is_authenticated", "is_active", "is_anonymous"}
+
+# A decorator below the route decorator whose name contains one of these
+# (lower case) is taken as an ownership check, e.g. @owner_required.
+OWNER_DECORATOR_WORDS = ["owner"]

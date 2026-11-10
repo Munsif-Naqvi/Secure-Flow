@@ -69,6 +69,7 @@ export class ResultsView implements vscode.WebviewViewProvider {
 const PROBLEM_TYPES: Record<string, { group: string; title: string }> = {
 	missing_login: { group: 'Missing login checks', title: 'No login check found' },
 	missing_role_check: { group: 'Missing role checks', title: 'Logged in, but no admin or role check found' },
+	missing_ownership_check: { group: 'Missing ownership checks', title: 'Logged in, but no check that the record belongs to the visitor' },
 };
 
 // Opens the finding's file with the cursor on its line.

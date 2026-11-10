@@ -108,7 +108,7 @@ The VS Code extension can write the comment for the developer: "Mark this route 
 
 **What a mark does not do.**
 - A route with a protection decorator above its route decorator (part 2) is still flagged, even when marked: the misplaced decorator shows the developer wanted a login check, which contradicts the mark.
-- A mark only answers the missing-login question. It never hides other kinds of findings (role checks, ownership checks) added later.
+- A mark only answers the missing-login question. It never hides other kinds of findings (role checks, ownership checks).
 
 A plain walkthrough of this part, the engine code and the extension action is in `docs/09-marking-routes-public.md`.
 
@@ -135,5 +135,39 @@ A plain walkthrough of this part is in `docs/10-missing-role-check.md`.
 
 **Honest limits.** The rule trusts names: a decorator called `@admin_check` that checks nothing hides the problem, and an admin page whose name does not say "admin" is not looked at. A role check inside a helper function that the handler calls is not seen, so such a route is flagged (when unsure, flag). Like every code-only result, these findings are Unconfirmed; FYP-2 confirms them by calling the route as an ordinary test user.
 
+## 10. The rule: missing ownership check (`missing_ownership_check`, also called IDOR)
+IDOR means "Insecure Direct Object Reference": the visitor chooses which record to open (for example `/user/profile?id=2`), and the app opens it without checking that the record belongs to the visitor. A logged-in User A can then read or change User B's data by changing the number. Login and role checks do not help here, because User A is logged in and has the right role.
+
+A route is flagged when **all** of these are true:
+1. It is **login-protected**, as in part 9 (a real protection, not only a "public on purpose" label). Routes with no protection are left to the missing-login rule.
+2. Its handler runs a query, `.execute(...)` or `.executemany(...)`, that starts with `SELECT`, `UPDATE` or `DELETE` (an `INSERT` adds a new row, it does not open someone else's). A query kept in a variable (`sql = "..."`) is followed in the same handler.
+3. The query reads or changes a **user-owned table**: a table named after FROM, JOIN or UPDATE whose CREATE TABLE statement, found in a string in any Python file of the project or in a `.sql` file, shows that its rows belong to users:
+   - the table is the users table itself (`user`, `users`, `account`, `accounts`), or
+   - it has an owner column (`user_id`, `owner_id`, `author_id`, `account_id`, `customer_id`, `created_by`), or
+   - one of its columns points to the users table (`REFERENCES users(id)`, also in a `FOREIGN KEY (...) REFERENCES users(...)` line).
+
+   A table without a CREATE TABLE in the project is not looked at, because SecureFlow cannot tell who owns its rows. This is the "database tables the route reads" part of the rule, and the same idea as the private values in `docs/08-verification-design.md`, layer 4.
+4. A value the **visitor chooses** goes into the query, as a parameter or inside the SQL text: a URL variable (`<int:note_id>`), or a value from `request.args`, `request.form`, `request.values`, `request.json` or `request.get_json()`, directly or through a local variable set from one of these. One such assignment is enough: in `user_id = request.args.get("id")`, followed by `if not user_id: user_id = session["user_id"]`, the visitor can still choose the id.
+5. **No ownership check** is found. An ownership check is any of:
+   - the query itself is tied to the logged-in user: one of its values is `session["user_id"]` or `session.get(...)` with a user key (as in part 2d), `current_user.id` (any `current_user` attribute except `is_authenticated`, `is_active`, `is_anonymous`), `g.user`, `get_jwt_identity()`, or a variable set only from these. For example `WHERE id = ? AND user_id = ?` with `(note_id, session["user_id"])`;
+   - an `if` in the handler that compares (`==`, `!=`, `is`, `is not`) the logged-in user with something that is not a fixed value, and whose branch turns the visitor away, as in part 2d. For example `if note["user_id"] != session["user_id"]: abort(403)`. Comparing the session with a fixed value, as in `if session.get("user_id") is None`, is a login check, not an ownership check;
+   - a decorator below the route decorator whose name contains `owner`, for example `@owner_required`.
+
+**Severity:** always High (another user's private data, or a change to it).
+
+**Explanation template:** `This route (<METHODS> <url_path>) checks that the visitor is logged in, but it reads a record from the <table> table using a value the visitor chooses (<value>). <why the table is user-owned>, and SecureFlow found no check that the record belongs to the visitor. A logged-in user may be able to see another user's data by changing that value. This was found by reading the code and has not been tested live.`
+- `<value>` names the value, for example `id from the query string`, `note_id in the URL path`, `id from the form`, `id from the JSON body`. When several visitor values go into the query, one whose name contains `id` is named.
+- `<why the table is user-owned>` is one of `Each row of that table is one user's data` (the users table), `In that table the user_id column says which user owns each row`, or `In that table the owner column points to the users table, so each row belongs to a user`.
+- For `UPDATE` and `DELETE`: `changes a record in` and `change or delete another user's data`.
+
+One route gets at most one ownership finding, for the first such query. It can also get a role check finding (part 9); they are different problems.
+
+**Honest limits.**
+- Only raw SQL through `.execute(...)` is read. ORM queries such as SQLAlchemy's `Note.query.get(note_id)` or `db.session.get(Note, id)` are not looked at yet, so such IDORs are missed.
+- Tables created outside the project's code (migrations run elsewhere, an existing database) are unknown, so their routes are not flagged.
+- An ownership check inside a helper function, or written as a call such as `if not current_user.owns(note): abort(403)`, is not seen, so the route is flagged (when unsure, flag). An `@owner_...` decorator that checks nothing hides the problem.
+- The users table is always treated as private. A page meant to show other users' public profiles (`/user/<name>`) is flagged; the developer decides.
+- Like every code-only result, these findings are Unconfirmed. FYP-2 confirms them by logging in as User A and asking for User B's record (`docs/08-verification-design.md`).
+
 ## Later rules (FYP-1 second half, not now)
-Access to another user's data (missing ownership check), command injection, path traversal, template injection.
+Command injection, path traversal, template injection.

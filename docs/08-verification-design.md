@@ -52,7 +52,7 @@ Layer 3 *sorts* routes. It does not decide the identical case on its own.
 | Neither | **Public content** (informational only) |
 
 ## The ownership-check rule is separate
-"User A can read User B's record" (missing ownership check, also called IDOR) is a separate detection rule, not one of the five layers. It shares the same sandbox, test accounts and database copy. Static detection of it comes in the later FYP-1 work; live confirmation comes in FYP-2.
+"User A can read User B's record" (missing ownership check, also called IDOR) is a separate detection rule, not one of the five layers. It shares the same sandbox, test accounts and database copy. Static detection of it is built in FYP-1 (`docs/03-detection-rules.md`, part 10: a logged-in route that reads a user-owned table with a visitor-chosen value and no ownership check); live confirmation comes in FYP-2, by logging in as User A and asking for User B's record.
 
 ## Limits
 - The tool cannot read the developer's intent. It can only gather evidence.

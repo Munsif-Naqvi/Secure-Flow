@@ -47,8 +47,8 @@ def test_same_path_is_told_apart_by_http_method():
 
 
 def test_problem_types_the_engine_does_not_check_are_listed_apart():
-    # app_02_shop lists a missing ownership check, which the engine does not check yet.
-    assert "- Not checked yet: `GET /admin/users, missing_ownership_check`" in TABLE
+    # app_02_shop lists an SQL injection, which the engine does not check yet.
+    assert "- Not checked yet: `GET /admin/users, sql_injection`" in TABLE
     # Login and role checks are checked: both entries for /admin/users are missed
     # (the engine trusts @admin_check), and each is listed once.
     assert TABLE.count("- Missed: `GET /admin/users`") == 2

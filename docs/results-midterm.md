@@ -1,20 +1,40 @@
 # Midterm results: SecureFlow on the test corpus
 
-First run on 2026-10-28, updated on 2026-10-29 after the public content rule, with `python engine/score.py corpus/`, on Maheen's five apps (`corpus/README.md`).
+First run on 2026-10-28, updated after each new rule (latest: the ownership check, 2026-11-10), with `python engine/score.py corpus/`, on Maheen's five apps (`corpus/README.md`).
 Every finding is **Unconfirmed**: it comes from reading the code only.
 
 ## How to read the table
-- **Real problems**: routes in `should_flag` with a problem the engine looks for (a missing login check, and since the role check rule a missing role check).
+- **Real problems**: routes in `should_flag` with a problem the engine looks for (a missing login check, a missing role check, and since the ownership check rule a missing ownership check).
 - **Found** (true positive): a real problem the engine flagged.
 - **Missed** (false negative): a real problem the engine did not flag.
 - **False alarm** (false positive): a flagged route that is not a real problem.
 - **Known limitation**: a flagged route that is not a real problem but that the code-only scan is *expected* to flag, because of a documented limit (a public page that reads the database, `docs/03-detection-rules.md` part 4). Listed under `known_limitations` in the ground truth, reported on its own line, not counted as a false alarm.
 - **Precision** = found / (found + false alarms): how many flags were right. **Recall** = found / (found + missed): how many real problems were flagged.
-- **Not checked yet**: real problems of a kind the engine does not look for yet (ownership checks). They are planned for later and are not counted as missed.
+- **Not checked yet**: real problems of a kind the engine does not look for yet. Since the ownership check rule, every problem type in the corpus is checked, so this column is 0.
 
 A finding matches a ground truth entry when the `url_path` and the problem type are equal and, if the entry lists `http_methods`, the route shares one of them.
 
-## Results (current engine, with the role check rule)
+## Results (current engine, with the ownership check rule)
+Updated on 2026-11-10. The missing ownership check rule (`docs/03-detection-rules.md`, part 10) now checks `missing_ownership_check` entries too.
+
+| App | Real problems | Found | Missed | False alarms | Not checked yet |
+|---|---|---|---|---|---|
+| app_01_ecommerce | 3 | 3 | 0 | 0 | 0 |
+| app_02_admin_cms | 1 | 1 | 0 | 0 | 0 |
+| app_03_idor | 1 | 1 | 0 | 0 | 0 |
+| app_04_blog | 2 | 2 | 0 | 0 | 0 |
+| app_05_safe_control | 0 | 0 | 0 | 0 | 0 |
+| **Total** | **7** | **7** | **0** | **0** | **0** |
+
+Known limitations (flagged as expected, not counted as false alarms): 1
+Precision: 1.00 (7/7), recall: 1.00 (7/7)
+
+- `GET /user/profile` (app 3) moved from "not checked yet" to found: it has `@login_required`, takes `id` from the query string and reads that row of the `users` table (email, credit card, address) without comparing it with `session['user_id']`.
+- `GET /notes/view` in app 5 is the same kind of route but is not flagged: it checks `note['user_id'] != session['user_id']` and aborts with 403.
+- No other corpus route is flagged by the new rule. The other logged-in routes either read no table with a visitor value (`/profile`, `/user/dashboard`, `/admin/dashboard`) or only insert a row (`/post/create`). Open routes such as `/post/delete/<int:post_id>` stay `missing_login` only.
+- The same caution as for the role check applies: the rule was written knowing app 3 and app 5, so it is also tested on 18 routes in `engine/tests/fixtures/idor_app/`, including a table found only in a `schema.sql` file.
+
+## Results with the role check rule (before the ownership check)
 Updated on 2026-11-09. The missing role check rule (`docs/03-detection-rules.md`, part 9) now checks `missing_role_check` entries too. Routes marked public by the developer (part 8) change nothing here: no corpus app carries a mark.
 
 | App | Real problems | Found | Missed | False alarms | Not checked yet |

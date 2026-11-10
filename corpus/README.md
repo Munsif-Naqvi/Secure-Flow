@@ -25,4 +25,4 @@ The five apps were written by Maheen Arshad for this project, in
 Each `ground_truth.json` was written from the `VULNERABLE ROUTE` and `SAFE ROUTE` comments in the app.
 `/products` in app 1 is not marked either way; it is listed as public because it shows a product list. Maheen should confirm this.
 `known_limitations` lists routes that are not real problems but that the code-only scan is expected to flag anyway (see `docs/03-detection-rules.md`, part 4). The scorer reports them on their own line, not as false alarms.
-The role check (app 2) and ownership check (app 3) problems are not checked by the midterm engine, which only looks for missing login checks.
+The role check (app 2) and ownership check (app 3) problems are checked by the rules added after the midterm (`docs/03-detection-rules.md`, parts 9 and 10).
