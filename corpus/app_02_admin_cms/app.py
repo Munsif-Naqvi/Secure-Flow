@@ -119,6 +119,9 @@ def logout():
 def user_dashboard():
     return f"<h3>User Dashboard</h3><p>Welcome, {session['username']}! This is your standard user area.</p>"
 
+@app.route('/user/profile')
+def user_profile():
+    return f"<h3>User Profile</h3><p>Username: {session['username']}<br>Role: {session['role']}</p>"
 
 # -------------------------------------------------------------
 # VULNERABLE ROUTE: Missing Role / Privilege Check
