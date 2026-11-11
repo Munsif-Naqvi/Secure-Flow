@@ -23,7 +23,7 @@ import ast
 from secureflow.constants import ADMIN_ROUTE_WORDS, PUBLIC_LABELS, ROLE_WORDS
 from secureflow.protections import protection_label, turns_visitor_away, walk_list
 from secureflow.routes import lookup_object
-from secureflow.rules import handler_name, match_key
+from secureflow.rules import match_key, route_name
 
 # Decorator labels from protections.py that already check a role, not only a login.
 ROLE_DECORATOR_LABELS = {"admin_required", "roles_required", "role_required", "permission_required"}
@@ -56,7 +56,7 @@ def contains_admin_word(text):
 
 def is_admin_style(route):
     """True if the path, the handler name or the Blueprint's variable name says "admin"."""
-    names = [route.url_path, handler_name(route.handler)]
+    names = [route.url_path, route_name(route)]
     if route.owner is not None and route.owner.kind == "blueprint":
         names.append(route.owner.name)
     return any(contains_admin_word(name) for name in names)

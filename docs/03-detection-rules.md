@@ -8,6 +8,7 @@ A route is a function decorated with one of:
 - `@bp.route("/path", ...)` where `bp` is a `Blueprint(...)`. If the Blueprint is registered with `url_prefix` (in `Blueprint(..., url_prefix=...)` or `app.register_blueprint(bp, url_prefix=...)`), prepend it. If the prefix cannot be found, use the route path alone.
 - `@app.get("/path")`, `@app.post(...)`, `.put`, `.delete`, `.patch` shortcuts
 - `app.add_url_rule("/path", view_func=fn, methods=[...])`
+- `@bp.route("/path")` on a `MethodView` class (the Flask-Smorest style). Each method of the class named `get`, `post`, `put`, `delete` or `patch` is its own route, with that one HTTP method; other methods (helpers) are not routes. Its line is the method's topmost decorator, or its `def` line. Its protections are the decorators on that method plus the class's `decorators = [...]` list, so `@jwt_required()` on `get` protects only GET. Decorators written on the class itself wrap the class, not the view, so they protect nothing and are not reported as misplaced. Rules that read the handler's name (privileged words, the public allowlist, admin-style routes) read the class name instead, because the method is only called `get` or `post`. (Added after scanning an outside Flask-Smorest course project, where these routes were not found at all.)
 Record: `url_path`, `http_methods` (default `["GET"]`), `file_path`, `line_number` (line of the decorator), and the handler function node.
 
 ## 2. Detecting protections

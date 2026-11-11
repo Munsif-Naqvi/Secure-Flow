@@ -55,7 +55,7 @@ def has_privileged_word(text):
 
 
 def is_privileged(route):
-    return has_privileged_word(route.url_path) or has_privileged_word(handler_name(route.handler))
+    return has_privileged_word(route.url_path) or has_privileged_word(route_name(route))
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +107,14 @@ def is_public(route):
     # "/About/" and "/about" are the same page. Removing the slash from "/" leaves "", so keep "/".
     if (path.rstrip("/") or "/") in PUBLIC_PATHS:
         return True
-    return handler_name(route.handler).lower() in PUBLIC_FUNCTION_NAMES
+    return route_name(route).lower() in PUBLIC_FUNCTION_NAMES
+
+
+def route_name(route):
+    """The name whose words the rules read: the MethodView class for a route
+    written as `@bp.route` on a class (its method is just "get" or "post"),
+    otherwise the handler function (or class)."""
+    return handler_name(route.view_class or route.handler)
 
 
 def handler_name(handler):

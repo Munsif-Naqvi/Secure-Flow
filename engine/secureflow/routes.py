@@ -45,6 +45,9 @@ class Route:
     line_number: int
     handler: object = None     # ast node of the function (or MethodView class)
     owner: object = None       # the FlaskObject (app or Blueprint) the route is on
+    # For `@bp.route` on a MethodView class: the class. Then `handler` is the
+    # one method (get, post, ...) that answers this route's HTTP method.
+    view_class: object = None
     # The decorators that really wrap the view Flask calls. Python applies
     # decorators from the bottom up, so for `@x.route` only the ones *below*
     # it count: one above it is added after Flask has already saved the view.
@@ -242,6 +245,12 @@ def routes_in_file(info, files, registrations):
                     route.decorators = node.decorator_list[index + 1:]
                     route.decorators_above = node.decorator_list[:index]
                     routes.append(route)
+        elif isinstance(node, ast.ClassDef):
+            for decorator in node.decorator_list:
+                class_route = route_from_decorator(decorator, node, info, files, registrations)
+                # Only `@x.route` can sit on a class (Flask-Smorest style), not `@x.get`.
+                if class_route and decorator.func.attr == "route":
+                    routes.extend(method_view_routes(class_route, node))
         elif isinstance(node, ast.Call):
             route = route_from_add_url_rule(node, info, files, registrations)
             if route:
@@ -279,6 +288,57 @@ def route_from_decorator(decorator, function, info, files, registrations):
         handler=function,
         owner=flask_object,
     )
+
+
+def method_view_routes(class_route, view_class):
+    """Turn `@bp.route("/path")` on a MethodView class into one route per method.
+
+    Flask calls the class's `get` for a GET request, its `delete` for a DELETE,
+    and so on. Each of these methods can have its own decorators, for example
+    `@jwt_required()` on `get` only, so each one is a separate route with its
+    own protections. The `methods=` of the route decorator is not used: the
+    methods the class defines decide.
+
+    Two kinds of decorators wrap a method's view:
+    - the decorators on the method itself (all of them count: Flask calls the
+      method after they were applied), and
+    - the class's `decorators = [...]` list, which wraps every method.
+    Decorators written on the class itself wrap the class, not the view, so
+    they protect nothing; they are not recorded (not even as misplaced,
+    because "move it below the route decorator" would be wrong advice here).
+
+    The line of each route is the method's topmost decorator, or its `def`
+    line, so the finding points at that method.
+    """
+    class_list = class_decorators_list(view_class)
+    routes = []
+    for item in view_class.body:
+        if not (isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name in METHOD_VIEW_FUNCTIONS):
+            continue  # helper methods such as `def helper(self)` are not routes
+        line = min([decorator.lineno for decorator in item.decorator_list] + [item.lineno])
+        routes.append(Route(
+            url_path=class_route.url_path,
+            http_methods=[item.name.upper()],
+            file_path=class_route.file_path,
+            line_number=line,
+            handler=item,
+            owner=class_route.owner,
+            view_class=view_class,
+            decorators=list(item.decorator_list) + class_list,
+        ))
+    return routes
+
+
+def class_decorators_list(view_class):
+    """The items of a `decorators = [...]` list inside a MethodView class."""
+    items = []
+    for statement in view_class.body:
+        if (isinstance(statement, ast.Assign) and len(statement.targets) == 1
+                and isinstance(statement.targets[0], ast.Name)
+                and statement.targets[0].id == "decorators"
+                and isinstance(statement.value, (ast.List, ast.Tuple))):
+            items += statement.value.elts
+    return items
 
 
 def route_from_add_url_rule(call, info, files, registrations):
