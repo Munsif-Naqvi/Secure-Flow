@@ -172,9 +172,15 @@ function cardHtml(result: ScanResult, finding: Finding, index: number): string {
 	const methods = route ? route.http_methods.join(', ') + ' ' : '';
 	const severityClass = finding.severity === 'High' ? 'high' : 'medium';
 	// "Mark as public" adds "# secureflow: public" above the route (see markPublic.ts).
+	// It sits outside the collapsible details, so it is visible on every
+	// missing-login card without selecting the card first. (Inside the details
+	// it vanished after each scan, because a new scan redraws the list with no
+	// card selected.)
 	const markButton = canMark(finding)
-		? `<button class="secondary" data-action="markPublic" data-index="${index}" title="Adds # secureflow: public above this route and scans again">Mark as public</button>
-			<p class="muted small">Only if this route is meant for everyone. A wrong mark hides a real problem.</p>`
+		? `<div class="mark">
+				<button class="secondary" data-action="markPublic" data-index="${index}" title="Adds # secureflow: public above this route and scans again">Mark as public</button>
+				<span class="muted small">Only if this route is meant for everyone.</span>
+			</div>`
 		: '';
 
 	return `
@@ -184,11 +190,12 @@ function cardHtml(result: ScanResult, finding: Finding, index: number): string {
 				<code>${escapeHtml(methods + finding.url_path)}</code>
 			</div>
 			<div class="muted">${escapeHtml(finding.file_path)}, line ${finding.line_number} · ${PROBLEM_TYPES[finding.problem_type]?.title ?? 'Possible problem'}</div>
+			${markButton}
 			<div class="details">
 				<span class="badge unconfirmed">Unconfirmed</span>
 				<p>${escapeHtml(finding.explanation)}</p>
 				<p class="muted">Unconfirmed means SecureFlow found this by reading the code. It has not been tested on a running copy of the app.</p>
-				${markButton}
+				${canMark(finding) ? '<p class="muted small">A wrong mark hides a real problem.</p>' : ''}
 			</div>
 		</div>`;
 }
@@ -228,6 +235,7 @@ const STYLE = `
 		background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 	button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
 	.small { font-size: 0.9em; }
+	.mark { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 	.footer { margin-top: 12px; }
 `;
 
