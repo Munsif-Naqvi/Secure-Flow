@@ -52,7 +52,7 @@ the score before and after.
 
 ```
 On a new branch maheen/command-injection from main, add the command_injection
-rule from docs/12-handover-fyp1-final.md section 5.5 using engine/secureflow/taint.py.
+rule from docs/12-handover-fyp1-final.md section 5 using engine/secureflow/taint.py.
 Fixture first (os.system, os.popen, subprocess.run with shell=True: flagged;
 subprocess.run with a list and no shell=True, shlex.quote: not flagged), show it
 to me, then the rule and tests. Run the tests and the score and show the results.
@@ -134,7 +134,7 @@ values inside .env except to decide High or Medium. Then the rule and tests.
 For each rule I added, update docs/03-detection-rules.md, add a decision entry
 under "Decisions made along the way" in CLAUDE.md, and write a walkthrough doc
 with the same sections as docs/11-missing-ownership-check.md. Then go through the
-"Done for the FYP-1 final" checklist in docs/12-handover-fyp1-final.md and tell
+"Done when" checklist (section 9) in docs/12-handover-fyp1-final.md and tell
 me what is still open.
 ```
 
