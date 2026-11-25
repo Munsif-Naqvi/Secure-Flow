@@ -5,7 +5,14 @@ SecureFlow is a final year project (SZABIST Karachi, two students: Syed Munsif a
 
 The long-term idea: the engine reads the code (static analysis), then a Docker sandbox attacks a disposable copy of the app to prove each suspect. A problem is called *confirmed* only when a live test proved it.
 
-## Where we are now: FYP-1, midterm slice
+## Where we are now: FYP-1 final (after the midterm evaluation)
+The midterm slice below is done and evaluated. For the FYP-1 final the work is split:
+- **Maheen** builds the unsafe input rules with taint tracking (`sql_injection`, `command_injection`, `path_traversal`, `template_injection`; SRS CODE-6) and the agreed new exposed secrets rules (`hardcoded_secret`, `env_file_not_ignored`, a new `exposed_secret` problem class). Design, lessons and checklist: `docs/12-handover-fyp1-final.md`. Step-by-step prompts: `docs/13-claude-code-prompts.md`.
+- **Munsif** builds the database side (scope to be agreed; `docs/05-database.sql`, SRS 4.12). SQLite storage and scan history are therefore allowed for that work only.
+- The exposed secrets rules are not in SRS 1.0; they were agreed by the team and need an SRS change log line. The schema change they need (`docs/04-findings.schema.json`) must be agreed by both students before merging.
+- Everything in the "Do not build yet" list below that is not named here still needs asking first.
+
+### Midterm slice (done)
 **Build only this, nothing more** (details and acceptance checks in `docs/02-midterm-scope.md`):
 1. A Python engine run from the command line: `python engine/main.py <project_folder>` prints findings as JSON.
 2. The engine finds Flask routes, detects their login protections, and flags routes with **no login check** (rules in `docs/03-detection-rules.md`).

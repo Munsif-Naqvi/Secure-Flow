@@ -172,5 +172,5 @@ A plain walkthrough of this part is in `docs/11-missing-ownership-check.md`.
 - The users table is always treated as private. A page meant to show other users' public profiles (`/user/<name>`) is flagged; the developer decides.
 - Like every code-only result, these findings are Unconfirmed. FYP-2 confirms them by logging in as User A and asking for User B's record (`docs/08-verification-design.md`).
 
-## Later rules (FYP-1 second half, not now)
-Command injection, path traversal, template injection.
+## Later rules (FYP-1 final, in progress)
+SQL injection, command injection, path traversal and template injection (taint tracking), and the exposed secrets rules. The proposed design is in `docs/12-handover-fyp1-final.md`; each rule moves into this file as its own part when it is built.
